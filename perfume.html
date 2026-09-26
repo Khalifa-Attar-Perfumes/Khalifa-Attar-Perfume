@@ -82,20 +82,31 @@ footer{border-top:1px solid var(--line);padding:48px 0 24px}.footgrid{display:gr
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const WHATSAPP="919819664949";
-// Real product photos live in /images, named exactly after the product (e.g. "images/Arabian Oud.jpg").
-// Matching is case/whitespace-insensitive so live-sheet edits (typos in casing, extra spaces) still find the photo.
-// If no photo matches, the elegant gold "bottle" placeholder is used instead — never a broken image icon.
-const IMAGE_FILES=["Arabian Oud","Aramani Gold","Belgium Musk","Bombshell Vs","Burberry Godess","CR7","Caramel Oud","Cool Water","Dubai Khalifa","Golden Dust (Dana)","Hawas","Ibteda","Imperial Valley","Issey Miyake","Khamrah","Marj","Musk Berry Fume","Musk Khalifa","Musk Rajali","Musky Leather","Peach Musk","Prince","Purple Oud","Red Ocean","Red Vanilla","Turkey Oud","Valentino","White Oud"];
-const IMAGE_LOOKUP={};
-IMAGE_FILES.forEach(f=>{IMAGE_LOOKUP[f.trim().toLowerCase()]=f});
-function imgFileFor(name){
-  const match=IMAGE_LOOKUP[String(name||"").trim().toLowerCase()];
-  return match?`images/${encodeURIComponent(match)}.jpg`:null;
+// PERFUME PHOTOS — separate from the Attar photos.
+// Upload them to the images/perfume/ folder, named exactly like the product in the Perfume sheet
+// (e.g. "images/perfume/Hawas.jpg"). .jpg, .jpeg, .png and .webp are all accepted.
+// Optional: an "Image" column in the Perfume sheet can give a different file name (e.g. "Hawas-bottle.png")
+// or a full image link. If no perfume photo is found, the gold bottle placeholder is shown — never the Attar photo.
+const PERFUME_IMG_DIR="images/perfume/";
+const PERFUME_IMG_EXTS=["jpg","jpeg","png","webp"];
+function perfumeImgCandidates(p){
+  const list=[];
+  const custom=String(p.image||"").trim();
+  if(custom){list.push(custom.includes("/")?encodeURI(custom):PERFUME_IMG_DIR+encodeURIComponent(custom))}
+  const base=PERFUME_IMG_DIR+encodeURIComponent(String(p.name||"").trim());
+  PERFUME_IMG_EXTS.forEach(ext=>list.push(`${base}.${ext}`));
+  return list;
 }
-function artHTML(name,fallbackLabel){
-  const src=imgFileFor(name);
-  if(!src) return `<div class="bottle"><div class="label">${fallbackLabel}</div></div>`;
-  return `<img src="${src}" alt="${esc(name)}" loading="lazy" onerror="this.outerHTML='<div class=\\'bottle\\'><div class=\\'label\\'>${fallbackLabel}</div></div>'">`;
+function placeholderHTML(label){return `<div class="bottle"><div class="label">${label}</div></div>`}
+function nextPerfumeImg(img){
+  let list=[];try{list=JSON.parse(img.dataset.srcs||"[]")}catch(e){}
+  const i=Number(img.dataset.i||0)+1;
+  if(i<list.length){img.dataset.i=String(i);img.src=list[i]}
+  else{img.outerHTML=placeholderHTML(img.dataset.label||"")}
+}
+function artHTML(p,fallbackLabel){
+  const srcs=perfumeImgCandidates(p);
+  return `<img src="${srcs[0]}" alt="${esc(p.name)}" loading="lazy" data-i="0" data-label="${esc(fallbackLabel)}" data-srcs="${esc(JSON.stringify(srcs))}" onerror="nextPerfumeImg(this)">`;
 }
 const PERFUME_SHEET_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTzOM59NNgfabIPP9hr6lSJQinpMy6vqsA2ctv9DSDyc6dpTJY7WcY3oRQ_WcoHTg/pub?gid=309389381&single=true&output=csv";
 let PRODUCTS=[{"name": "Caramel Oud", "price": 400}, {"name": "Turkey Oud", "price": 1000}, {"name": "Arabian Oud", "price": 1000}, {"name": "Dubai Khalifa", "price": 400}, {"name": "Ibteda", "price": 400}, {"name": "Musk khalifa", "price": 500}, {"name": "Belgium Musk", "price": 600}, {"name": "Purple Oud", "price": 400}, {"name": "Prince", "price": 1000}, {"name": "Peach Musk", "price": 1000}, {"name": "Burberry Godess", "price": 1000}, {"name": "Aramani Gold", "price": 400}, {"name": "Hawas", "price": 400}, {"name": "Khamrah", "price": 400}, {"name": "Red Vanilla", "price": 400}, {"name": "Red Ocean", "price": 400}, {"name": "Musk Berry Fume", "price": 400}, {"name": "Musky Leather", "price": 800}, {"name": "Marj", "price": 400}, {"name": "Imperial Valley", "price": 400}, {"name": "Valentino", "price": 400}, {"name": "Golden Dust (Dana)", "price": 400}, {"name": "Cool Water", "price": 300}, {"name": "CR7", "price": 300}, {"name": "Issey Miyake", "price": 400}, {"name": "Bombshell Vs", "price": 400}, {"name": "Musk Rajali", "price": 500}, {"name": "White Oud", "price": 300}],BAG=[];
@@ -158,8 +169,8 @@ function fallbackCopy(text,done){
 
 function parseCSV(t){const rows=[];let row=[],f="",q=false;for(let i=0;i<t.length;i++){const c=t[i],n=t[i+1];if(c==='"'){if(q&&n==='"'){f+='"';i++}else q=!q}else if(c===","&&!q){row.push(f);f=""}else if((c==="\\n"||c==="\\r")&&!q){if(c==="\\r"&&n==="\\n")i++;row.push(f);f="";if(row.some(v=>String(v).trim()!==""))rows.push(row);row=[]}else f+=c}if(f!==""||row.length){row.push(f);if(row.some(v=>String(v).trim()!==""))rows.push(row)}return rows}
 function normHeader(s){return String(s||"").replace(/^\\uFEFF/,"").trim().toLowerCase()}function col(h,n){for(const x of n){const i=h.indexOf(normHeader(x));if(i>=0)return i}return -1}
-async function loadPerfumes(){try{const r=await fetch(PERFUME_SHEET_CSV,{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);const rows=parseCSV(await r.text());const h=rows[0].map(normHeader),ni=col(h,["product name","name"]),pi=col(h,["base price","price"]),ai=col(h,["active"]);if(ni<0||pi<0)throw new Error("Missing columns");const live=rows.slice(1).map(x=>({name:String(x[ni]||"").trim(),price:Number(String(x[pi]||"").replace(/[^0-9.]/g,"")),active:ai<0?true:String(x[ai]||"true").trim().toLowerCase()!=="false"})).filter(x=>x.name&&x.price>0&&x.active);if(live.length)PRODUCTS=live}catch(e){console.warn("Perfume sheet:",e)}renderProducts()}
-function renderProducts(){document.getElementById("perfumesGrid").innerHTML=PRODUCTS.map((p,i)=>`<article class="product"><div class="art">${artHTML(p.name,"KHALIFA<br>PERFUME")}</div><div class="body"><div class="family">Signature Perfume</div><h3>${esc(p.name)}</h3><div class="bodyrow"><span class="family">Choose size</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px"><button class="btn" id="s50-${i}" onclick="chooseSize(${i},50)">50 ML<strong style="display:block;margin-left:5px">${money(p.price+150)}</strong></button><button class="btn" id="s100-${i}" onclick="chooseSize(${i},100)">100 ML<strong style="display:block;margin-left:5px">${money(p.price*2+150)}</strong></button></div><button class="btn gold" style="width:100%;margin-top:8px" id="add-${i}" disabled>Add selected size</button></div></article>`).join("")}
+async function loadPerfumes(){try{const r=await fetch(PERFUME_SHEET_CSV,{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);const rows=parseCSV(await r.text());const h=rows[0].map(normHeader),ni=col(h,["product name","name"]),pi=col(h,["base price","price"]),ai=col(h,["active"]),ii=col(h,["image","image url","image file","photo"]);if(ni<0||pi<0)throw new Error("Missing columns");const live=rows.slice(1).map(x=>({name:String(x[ni]||"").trim(),price:Number(String(x[pi]||"").replace(/[^0-9.]/g,"")),active:ai<0?true:String(x[ai]||"true").trim().toLowerCase()!=="false",image:ii<0?"":String(x[ii]||"").trim()})).filter(x=>x.name&&x.price>0&&x.active);if(live.length)PRODUCTS=live}catch(e){console.warn("Perfume sheet:",e)}renderProducts()}
+function renderProducts(){document.getElementById("perfumesGrid").innerHTML=PRODUCTS.map((p,i)=>`<article class="product"><div class="art">${artHTML(p,"KHALIFA<br>PERFUME")}</div><div class="body"><div class="family">Signature Perfume</div><h3>${esc(p.name)}</h3><div class="bodyrow"><span class="family">Choose size</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px"><button class="btn" id="s50-${i}" onclick="chooseSize(${i},50)">50 ML<strong style="display:block;margin-left:5px">${money(p.price+150)}</strong></button><button class="btn" id="s100-${i}" onclick="chooseSize(${i},100)">100 ML<strong style="display:block;margin-left:5px">${money(p.price*2+150)}</strong></button></div><button class="btn gold" style="width:100%;margin-top:8px" id="add-${i}" disabled>Add selected size</button></div></article>`).join("")}
 function chooseSize(i,size){const p=PRODUCTS[i],price=size===50?p.price+150:p.price*2+150;document.getElementById("s50-"+i).classList.toggle("gold",size===50);document.getElementById("s100-"+i).classList.toggle("gold",size===100);const b=document.getElementById("add-"+i);b.disabled=false;b.textContent=`Add ${size} ML to bag`;b.onclick=()=>addBag(p.name,`${size} ML`,price)}
 
 document.addEventListener("DOMContentLoaded",()=>{

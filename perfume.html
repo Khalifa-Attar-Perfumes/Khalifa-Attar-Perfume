@@ -83,18 +83,19 @@ footer{border-top:1px solid var(--line);padding:48px 0 24px}.footgrid{display:gr
 <script>
 const WHATSAPP="919819664949";
 // PERFUME PHOTOS — separate from the Attar photos.
-// Upload them to the images/perfume/ folder, named exactly like the product in the Perfume sheet
-// (e.g. "images/perfume/Hawas.jpg"). .jpg, .jpeg, .png and .webp are all accepted.
-// Optional: an "Image" column in the Perfume sheet can give a different file name (e.g. "Hawas-bottle.png")
-// or a full image link. If no perfume photo is found, the gold bottle placeholder is shown — never the Attar photo.
+// They live in images/perfume/ as lowercase names with dashes, made from the product name in the Perfume sheet:
+//   "Golden Dust (Dana)" -> images/perfume/golden-dust-dana.jpg,  "Musk khalifa" -> images/perfume/musk-khalifa.jpg
+// Capital/small letters and spaces in the sheet therefore never break a photo.
+// Optional: an "Image" column in the Perfume sheet can give a different file name or a full image link.
+// If no perfume photo is found, the gold bottle placeholder is shown — never the Attar photo.
 const PERFUME_IMG_DIR="images/perfume/";
-const PERFUME_IMG_EXTS=["jpg","jpeg","png","webp"];
+function perfumeSlug(name){return String(name||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}
 function perfumeImgCandidates(p){
   const list=[];
   const custom=String(p.image||"").trim();
   if(custom){list.push(custom.includes("/")?encodeURI(custom):PERFUME_IMG_DIR+encodeURIComponent(custom))}
-  const base=PERFUME_IMG_DIR+encodeURIComponent(String(p.name||"").trim());
-  PERFUME_IMG_EXTS.forEach(ext=>list.push(`${base}.${ext}`));
+  const slug=perfumeSlug(p.name);
+  if(slug){list.push(`${PERFUME_IMG_DIR}${slug}.jpg`,`${PERFUME_IMG_DIR}${slug}.png`)}
   return list;
 }
 function placeholderHTML(label){return `<div class="bottle"><div class="label">${label}</div></div>`}
@@ -106,6 +107,7 @@ function nextPerfumeImg(img){
 }
 function artHTML(p,fallbackLabel){
   const srcs=perfumeImgCandidates(p);
+  if(!srcs.length) return placeholderHTML(fallbackLabel);
   return `<img src="${srcs[0]}" alt="${esc(p.name)}" loading="lazy" data-i="0" data-label="${esc(fallbackLabel)}" data-srcs="${esc(JSON.stringify(srcs))}" onerror="nextPerfumeImg(this)">`;
 }
 const PERFUME_SHEET_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vTzOM59NNgfabIPP9hr6lSJQinpMy6vqsA2ctv9DSDyc6dpTJY7WcY3oRQ_WcoHTg/pub?gid=309389381&single=true&output=csv";

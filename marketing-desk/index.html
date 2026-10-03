@@ -265,7 +265,7 @@ details.more summary{cursor:pointer;font-weight:650;color:var(--ink2)}
   <div class="card">
     <div class="ttl"><span class="step">2</span>Your contacts <span class="sub" id="cCount" style="font-weight:500"></span></div>
     <div class="grid2"><input class="in" id="cSearch" placeholder="Search name or number" oninput="renderContacts()">
-      <select class="in" id="cFilter" onchange="renderContacts()"><option value="all">All</option><option value="ready">✅ Ready to message</option><option value="lock">🔒 Locked (cooldown)</option><option value="stop">🚫 STOP list</option><option value="never">Never messaged</option></select></div>
+      <select class="in" id="cFilter" onchange="renderContacts()"><option value="all">All</option><option value="ready">✅ Ready to message</option><option value="lock">🔒 Locked (cooldown)</option><option value="stop">🚫 STOP list</option><option value="never">Never messaged</option><option value="tagged">Saved as C / Customer</option></select></div>
     <div class="list" id="cList" style="margin-top:10px"></div>
     <div class="row" style="margin-top:10px"><button class="btn sm" onclick="exportContacts()">Download contacts (CSV)</button><button class="btn sm" onclick="cleanupContacts(true)">Clean up: duplicates, no-name &amp; non-10-digit</button></div>
   </div>
@@ -545,7 +545,7 @@ function renderContacts(){
   let q=$('cSearch').value.trim().toLowerCase(),f=$('cFilter').value,qd=q.replace(/\D/g,'');
   let list=db.contacts.map(c=>({c,st:statusOf(c.mobile)})).filter(({c,st})=>{
     if(q&&!(c.name.toLowerCase().includes(q)||(qd&&c.mobile.includes(qd))))return false;
-    if(f==='never')return !st.last&&st.s!=='stop';if(f!=='all')return st.s===f;return true});
+    if(f==='never')return !st.last&&st.s!=='stop';if(f==='tagged')return isTaggedCustomer(c.name);if(f!=='all')return st.s===f;return true});
   list.sort((a,b)=>a.c.name.localeCompare(b.c.name));
   $('cCount').textContent=`(${list.length} / ${db.contacts.length})`;
   let shown=list.slice(0,400);
@@ -554,11 +554,14 @@ function renderContacts(){
 
 /* ---------- groups / selection ---------- */
 const ui={group:'ready',sel:null,cat:'offer',tplId:null,mode:'same',edited:false};
-function groupList(){return[['ready','All ready customers'],['never','Never messaged'],['again',`Messaged ${db.settings.cooldown}+ days ago`],['recent','Imported in the last 7 days']]}
+// Customers saved in the phone as "C Rahul", "C-Rahul", "C.Rahul" or with the word "Customer" in the name.
+// "C" must be followed by a space/dash/dot etc., so normal names like Chirag or Chetan are NOT included.
+function isTaggedCustomer(n){n=String(n||'').trim();return /^c[\s\-._:,/|]+\S/i.test(n)||/customer/i.test(n)}
+function groupList(){return[['ready','All ready customers'],['tagged','Saved as C / Customer'],['never','Never messaged'],['again',`Messaged ${db.settings.cooldown}+ days ago`],['recent','Imported in the last 7 days']]}
 function groupMembers(g){
   let wk=Date.now()-7*DAY;
   return db.contacts.filter(c=>{let st=statusOf(c.mobile);if(st.s!=='ready')return false;
-    if(g==='never')return !st.last;if(g==='again')return !!st.last;if(g==='recent')return new Date(c.added).getTime()>=wk;return true});
+    if(g==='tagged')return isTaggedCustomer(c.name);if(g==='never')return !st.last;if(g==='again')return !!st.last;if(g==='recent')return new Date(c.added).getTime()>=wk;return true});
 }
 function skipped(){let lock=0,stop=0;db.contacts.forEach(c=>{let s=statusOf(c.mobile).s;if(s==='lock')lock++;else if(s==='stop')stop++});return{lock,stop}}
 function renderGroups(){

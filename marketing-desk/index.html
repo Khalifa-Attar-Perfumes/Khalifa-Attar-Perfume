@@ -236,7 +236,7 @@ details.more summary{cursor:pointer;font-weight:650;color:var(--ink2)}
 <!-- CONTACTS -->
 <section class="page" id="p-contacts">
   <h2>Contacts</h2>
-  <div class="sub">Add numbers from your phone, from a file, or by hand. Duplicates are removed automatically.</div>
+  <div class="sub">Add numbers from your phone, from a file, or by hand. Only 10-digit Indian mobile numbers are kept — landlines, international and invalid numbers are skipped, and duplicates are removed automatically.</div>
   <div class="card">
     <div class="ttl"><span class="step">1</span>Import</div>
     <div class="row">
@@ -267,7 +267,7 @@ details.more summary{cursor:pointer;font-weight:650;color:var(--ink2)}
     <div class="grid2"><input class="in" id="cSearch" placeholder="Search name or number" oninput="renderContacts()">
       <select class="in" id="cFilter" onchange="renderContacts()"><option value="all">All</option><option value="ready">✅ Ready to message</option><option value="lock">🔒 Locked (cooldown)</option><option value="stop">🚫 STOP list</option><option value="never">Never messaged</option></select></div>
     <div class="list" id="cList" style="margin-top:10px"></div>
-    <div class="row" style="margin-top:10px"><button class="btn sm" onclick="exportContacts()">Download contacts (CSV)</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" onclick="exportContacts()">Download contacts (CSV)</button><button class="btn sm" onclick="cleanupContacts(true)">Keep only 10-digit Indian mobiles</button></div>
   </div>
 </section>
 
@@ -374,7 +374,8 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(db));storageOk=true}
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function toast(t){let e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
-// Normalises any phone format to WhatsApp digits (India by default). Returns '' if it is not a usable mobile number.
+// Only 10-digit Indian mobile numbers are kept (with or without +91 / 0 in front).
+// Landlines, international and short/long numbers return '' and are skipped.
 function normMobile(m){
   let d=String(m||'').replace(/[^\d+]/g,'');
   if(d.startsWith('+'))d=d.slice(1);else if(d.startsWith('00'))d=d.slice(2);
@@ -382,8 +383,21 @@ function normMobile(m){
   if(d.length===11&&d[0]==='0')d=d.slice(1);
   if(d.length===10)return /^[6-9]/.test(d)?'91'+d:'';
   if(d.length===12&&d.startsWith('91'))return /^[6-9]/.test(d[2])?d:'';
-  if(d.length>=11&&d.length<=15&&!d.startsWith('91'))return d;
   return '';
+}
+function isIndianMobile(k){return /^91[6-9]\d{9}$/.test(String(k||''))}
+// Removes saved contacts whose number is not a 10-digit Indian mobile. ask=false skips the confirm (used by the button's own flow).
+function cleanupContacts(fromButton){
+  let bad=db.contacts.filter(c=>!isIndianMobile(c.mobile));
+  db.settings.indiaOnlyChecked=true;
+  if(!bad.length){save();if(fromButton)toast('All contacts already have 10-digit Indian mobile numbers');return}
+  let sample=bad.slice(0,5).map(c=>`${c.name} (+${c.mobile})`).join('\n');
+  if(!confirm(`${plural(bad.length,'contact')} ${bad.length===1?'does':'do'} not have a 10-digit Indian mobile number and will be removed:\n\n${sample}${bad.length>5?'\n…and '+(bad.length-5)+' more':''}\n\nRemove them now?`)){save();return}
+  let badSet=new Set(bad.map(c=>c.mobile));
+  db.contacts=db.contacts.filter(c=>!badSet.has(c.mobile));
+  save();renderAll();
+  $('importMsg').innerHTML=`<div class="note good">${esc(`✓ Removed ${plural(bad.length,'contact')} without a 10-digit Indian mobile number. ${plural(db.contacts.length,'contact')} kept.`)}</div>`;
+  toast(`Removed ${plural(bad.length,'contact')}`);
 }
 function fmtMobile(k){return k.startsWith('91')&&k.length===12?'+91 '+k.slice(2,7)+' '+k.slice(7):'+'+k}
 function dateIN(t){return new Date(t).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
@@ -415,7 +429,7 @@ function addContact(name,mobile,source){
   db.contacts.push({name:name||'Customer',mobile:k,added:new Date().toISOString(),source:source||'manual'});return 'ok';
 }
 function report(r){
-  let t=`✓ ${plural(r.ok,'new contact')} added`+(r.upd?` · ${r.upd} names updated`:'')+(r.dup?` · ${r.dup} already saved`:'')+(r.bad?` · ${r.bad} skipped (landline or invalid number)`:'');
+  let t=`✓ ${plural(r.ok,'new contact')} added`+(r.upd?` · ${r.upd} names updated`:'')+(r.dup?` · ${r.dup} already saved`:'')+(r.bad?` · ${r.bad} skipped (not a 10-digit Indian mobile)`:'');
   $('importMsg').innerHTML=`<div class="note ${r.ok||r.upd?'good':''}">${esc(t)}</div>`;
   save();lastIdx=null;renderAll();toast(`${plural(r.ok,'contact')} added`);
 }
@@ -701,6 +715,7 @@ let d0=new Date();d0.setDate(d0.getDate()+7);$('fValid').value=d0.toISOString().
 $('fCode').value='KAF-'+new Date().toLocaleString('en-US',{month:'short'}).toUpperCase()+'10';
 $('tplTotal').textContent=TEMPLATES.length;
 loadSettings();renderCats();selectCat('offer');renderAll();save();
+if(!db.settings.indiaOnlyChecked&&db.contacts.some(c=>!isIndianMobile(c.mobile)))setTimeout(()=>{go('contacts');cleanupContacts(false)},400);
 </script>
 </body>
 </html>

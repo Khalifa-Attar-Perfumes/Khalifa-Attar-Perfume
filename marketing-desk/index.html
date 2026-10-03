@@ -267,7 +267,7 @@ details.more summary{cursor:pointer;font-weight:650;color:var(--ink2)}
     <div class="grid2"><input class="in" id="cSearch" placeholder="Search name or number" oninput="renderContacts()">
       <select class="in" id="cFilter" onchange="renderContacts()"><option value="all">All</option><option value="ready">✅ Ready to message</option><option value="lock">🔒 Locked (cooldown)</option><option value="stop">🚫 STOP list</option><option value="never">Never messaged</option></select></div>
     <div class="list" id="cList" style="margin-top:10px"></div>
-    <div class="row" style="margin-top:10px"><button class="btn sm" onclick="exportContacts()">Download contacts (CSV)</button><button class="btn sm" onclick="cleanupContacts(true)">Keep only 10-digit Indian mobiles</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" onclick="exportContacts()">Download contacts (CSV)</button><button class="btn sm" onclick="cleanupContacts(true)">Remove duplicates &amp; non-10-digit numbers</button></div>
   </div>
 </section>
 
@@ -387,10 +387,32 @@ function normMobile(m){
 }
 function isIndianMobile(k){return /^91[6-9]\d{9}$/.test(String(k||''))}
 // Removes saved contacts whose number is not a 10-digit Indian mobile. ask=false skips the confirm (used by the button's own flow).
+// Re-normalise every saved number and merge any that turn out to be the same mobile
+// (e.g. "98765 43210", "+91 98765-43210" and "098765 43210" saved by an older import).
+// Keeps a real name over "Customer", and the earliest added date. Returns how many were merged.
+function mergeDuplicates(){
+  let byKey=new Map(),merged=0;
+  db.contacts.forEach(c=>{
+    let k=normMobile(c.mobile)||c.mobile;c.mobile=k;
+    let ex=byKey.get(k);
+    if(!ex){byKey.set(k,c);return}
+    merged++;
+    let real=n=>n&&!/^(customer|unknown)$/i.test(n.trim());
+    if(!real(ex.name)&&real(c.name))ex.name=c.name;
+    if(c.added&&(!ex.added||c.added<ex.added))ex.added=c.added;
+  });
+  db.contacts=[...byKey.values()];
+  let seen=new Set();
+  db.optOut=db.optOut.map(o=>({...o,mobile:normMobile(o.mobile)||o.mobile})).filter(o=>!seen.has(o.mobile)&&seen.add(o.mobile));
+  if(merged)lastIdx=null;
+  return merged;
+}
 function cleanupContacts(fromButton){
+  let merged=mergeDuplicates();
+  if(merged){save();renderAll();toast(`Merged ${plural(merged,'duplicate contact')}`)}
   let bad=db.contacts.filter(c=>!isIndianMobile(c.mobile));
   db.settings.indiaOnlyChecked=true;
-  if(!bad.length){save();if(fromButton)toast('All contacts already have 10-digit Indian mobile numbers');return}
+  if(!bad.length){save();if(fromButton&&!merged)toast('No duplicates · all contacts have 10-digit Indian mobiles');return}
   let sample=bad.slice(0,5).map(c=>`${c.name} (+${c.mobile})`).join('\n');
   if(!confirm(`${plural(bad.length,'contact')} ${bad.length===1?'does':'do'} not have a 10-digit Indian mobile number and will be removed:\n\n${sample}${bad.length>5?'\n…and '+(bad.length-5)+' more':''}\n\nRemove them now?`)){save();return}
   let badSet=new Set(bad.map(c=>c.mobile));
@@ -459,31 +481,39 @@ function parseVcf(txt){
   let lines=txt.replace(/\r\n/g,'\n').replace(/\n[ \t]/g,'').split('\n'),out=[],cur=null,joined=[];
   for(let i=0;i<lines.length;i++){let l=lines[i];while(/ENCODING=QUOTED-PRINTABLE/i.test(l)&&l.endsWith('=')&&i+1<lines.length){l=l.slice(0,-1)+lines[++i]}joined.push(l)}
   joined.forEach(l=>{
-    if(/^BEGIN:VCARD/i.test(l)){cur={fn:'',n:'',tels:[]};return}
-    if(/^END:VCARD/i.test(l)){if(cur){let name=cur.fn||cur.n;let tel=cur.tels.map(normMobile).find(Boolean);out.push([name,tel||'x'])}cur=null;return}
+    if(/^BEGIN:VCARD/i.test(l)){cur={fn:'',n:'',org:'',nick:'',tels:[]};return}
+    if(/^END:VCARD/i.test(l)){if(cur){let name=cur.fn||cur.n||cur.nick||cur.org;let tel=cur.tels.map(normMobile).find(Boolean);out.push([name,tel||'x'])}cur=null;return}
     if(!cur)return;let i=l.indexOf(':');if(i<0)return;
     let key=l.slice(0,i),val=l.slice(i+1),prop=key.split(';')[0].split('.').pop().toUpperCase();
     if(/QUOTED-PRINTABLE/i.test(key)){try{val=qpDecode(val)}catch(e){}}
     if(prop==='FN')cur.fn=vUnesc(val).trim();
     else if(prop==='N'){let p=val.split(';').map(vUnesc);cur.n=[p[1],p[2],p[0]].filter(Boolean).join(' ').trim()}
     else if(prop==='TEL')cur.tels.push(val.replace(/^tel:/i,''));
+    else if(prop==='NICKNAME')cur.nick=vUnesc(val).trim();
+    else if(prop==='ORG')cur.org=vUnesc(val).split(';').filter(Boolean).join(' ').trim();
   });
   return out;
 }
-function csvRows(t){let rows=[],row=[],f='',q=false;for(let i=0;i<t.length;i++){let c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===','){row.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}else f+=c}if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(x=>x.trim()))}
+function csvRows(t,sep){sep=sep||',';let rows=[],row=[],f='',q=false;for(let i=0;i<t.length;i++){let c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===sep){row.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}else f+=c}if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(x=>x.trim()))}
+// Excel in India often saves CSV with ';' — pick whichever separator the header line uses most
+function csvSep(t){let first=t.split(/\r?\n/)[0]||'';let n=c=>first.split(c).length-1;return [',',';','\t'].sort((a,b)=>n(b)-n(a))[0]}
 function parseCsvContacts(t){
-  let rows=csvRows(t.replace(/^﻿/,''));if(!rows.length)return[];
-  let h=rows[0].map(x=>x.trim().toLowerCase()),has=s=>{let i=h.indexOf(s);return i>=0?i:null};
-  let phoneCols=h.map((x,i)=>/(phone|mobile|number|contact|whatsapp)/.test(x)&&!/(type|label)/.test(x)?i:-1).filter(i=>i>=0);
-  let nameIdx=[has('name'),has('full name'),has('display name'),has('customer'),has('customer name')].find(i=>i!=null);
-  let fi=[has('first name'),has('given name')].find(i=>i!=null),li=[has('last name'),has('family name')].find(i=>i!=null);
-  let start=1;if(!phoneCols.length){start=0;phoneCols=null}
+  t=t.replace(/^\uFEFF/,'');let rows=csvRows(t,csvSep(t));if(!rows.length)return[];
+  let h=rows[0].map(x=>x.trim().toLowerCase().replace(/\s+/g,' '));
+  let isPhoneHdr=x=>/(phone|mobile|number|whatsapp|cell|tel\b|contact no|contact number|mob\b)/.test(x)&&!/(name|type|label)/.test(x);
+  let phoneCols=h.map((x,i)=>isPhoneHdr(x)?i:-1).filter(i=>i>=0);
+  let find=list=>{for(const n of list){let i=h.indexOf(n);if(i>=0)return i}return null};
+  let nameIdx=find(['name','full name','display name','contact name','customer name','customer','client name','party name']);
+  if(nameIdx==null){let i=h.findIndex(x=>/name/.test(x)&&!/(first|given|middle|last|family|sur|nick|file|user|company|org)/.test(x));if(i>=0)nameIdx=i}
+  let fi=find(['first name','given name']),mi=find(['middle name','additional name']),li=find(['last name','family name','surname']);
+  let headerRow=phoneCols.length>0||nameIdx!=null||fi!=null;
   let out=[];
-  rows.slice(start).forEach(r=>{
-    let tel=phoneCols?phoneCols.flatMap(i=>String(r[i]||'').split(/:::|;|\//)).map(normMobile).find(Boolean):r.map(normMobile).find(Boolean);
-    let name=nameIdx!=null?r[nameIdx]:[fi!=null?r[fi]:'',li!=null?r[li]:''].join(' ');
-    if(!phoneCols&&!String(name).trim())name=r.find(x=>x.trim()&&!normMobile(x))||'';
-    out.push([String(name||'').trim(),tel||'x']);
+  rows.slice(headerRow?1:0).forEach(r=>{
+    let cells=phoneCols.length?phoneCols.flatMap(i=>String(r[i]||'').split(/:::|;|\/|,/)):r;
+    let tel=cells.map(normMobile).find(Boolean);
+    let name=nameIdx!=null?r[nameIdx]:[fi,mi,li].map(i=>i!=null?r[i]:'').join(' ');
+    if(!String(name||'').trim())name=r.find(x=>x&&x.trim()&&!/\d{5,}/.test(x)&&!/@/.test(x))||'';
+    out.push([String(name||'').replace(/\s+/g,' ').trim(),tel||'x']);
   });
   return out;
 }
@@ -715,6 +745,7 @@ let d0=new Date();d0.setDate(d0.getDate()+7);$('fValid').value=d0.toISOString().
 $('fCode').value='KAF-'+new Date().toLocaleString('en-US',{month:'short'}).toUpperCase()+'10';
 $('tplTotal').textContent=TEMPLATES.length;
 loadSettings();renderCats();selectCat('offer');renderAll();save();
+if(mergeDuplicates()){save()}
 if(!db.settings.indiaOnlyChecked&&db.contacts.some(c=>!isIndianMobile(c.mobile)))setTimeout(()=>{go('contacts');cleanupContacts(false)},400);
 </script>
 </body>

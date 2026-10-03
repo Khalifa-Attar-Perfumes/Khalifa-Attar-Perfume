@@ -513,7 +513,8 @@ function parseCsvContacts(t){
   let phoneCols=h.map((x,i)=>isPhoneHdr(x)?i:-1).filter(i=>i>=0);
   let find=list=>{for(const n of list){let i=h.indexOf(n);if(i>=0)return i}return null};
   let nameIdx=find(['name','full name','display name','contact name','customer name','customer','client name','party name']);
-  if(nameIdx==null){let i=h.findIndex(x=>/name/.test(x)&&!/(first|given|middle|last|family|sur|nick|file|user|company|org)/.test(x));if(i>=0)nameIdx=i}
+  if(nameIdx==null){let i=h.findIndex(x=>/name/.test(x)&&!/(first|given|middle|last|family|sur|nick|file|user|company|org|prefix|suffix|phonetic|title)/.test(x));if(i>=0)nameIdx=i}
+  let nick=find(['nickname','nick name']),orgI=find(['organization name','organisation name','company','company name','organization 1 - name']);
   let fi=find(['first name','given name']),mi=find(['middle name','additional name']),li=find(['last name','family name','surname']);
   let headerRow=phoneCols.length>0||nameIdx!=null||fi!=null;
   let out=[];
@@ -521,7 +522,10 @@ function parseCsvContacts(t){
     let cells=phoneCols.length?phoneCols.flatMap(i=>String(r[i]||'').split(/:::|;|\/|,/)):r;
     let tel=cells.map(normMobile).find(Boolean);
     let name=nameIdx!=null?r[nameIdx]:[fi,mi,li].map(i=>i!=null?r[i]:'').join(' ');
-    if(!String(name||'').trim())name=r.find(x=>x&&x.trim()&&!/\d{5,}/.test(x)&&!/@/.test(x))||'';
+    if(!String(name||'').trim()&&nick!=null)name=r[nick];
+    if(!String(name||'').trim()&&orgI!=null)name=r[orgI];
+    // no header at all: take the first text cell that isn't a number or e-mail
+    if(!String(name||'').trim()&&!headerRow)name=r.find(x=>x&&x.trim()&&!/\d{5,}/.test(x)&&!/@/.test(x))||'';
     out.push([String(name||'').replace(/\s+/g,' ').trim(),tel||'x']);
   });
   return out;

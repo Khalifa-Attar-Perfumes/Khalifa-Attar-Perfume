@@ -299,7 +299,9 @@ details.more summary{cursor:pointer;font-weight:650;color:var(--ink2)}
       <div><label class="f">Offer {offer}</label><input class="in" id="fOffer" value="10% OFF" oninput="preview()"></div>
       <div><label class="f">Offer code {coupon} — leave empty to remove the code line</label><input class="in" id="fCode" style="text-transform:uppercase" oninput="preview()"></div>
       <div><label class="f">Valid till {valid_till}</label><input class="in" id="fValid" type="date" oninput="preview()"></div>
-      <div><label class="f">Product {product}</label><select class="in" id="fProduct" onchange="preview()"></select></div>
+      <div><label class="f">Product {product}</label>
+        <div style="display:flex;gap:6px"><select class="in" id="fProduct" onchange="prodChange()" style="flex:1;min-width:0"></select><button class="btn sm hide" id="prodDel" onclick="removeProduct()" title="Remove this new arrival from the list">✕</button></div>
+        <div id="prodAdd" class="hide" style="margin-top:6px"><div style="display:flex;gap:6px"><input class="in" id="newProd" placeholder="New arrival name, e.g. Royal Oud" maxlength="60" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter')addProduct()"><button class="btn sm" onclick="addProduct()">Add</button><button class="btn sm" onclick="cancelAddProduct()">Cancel</button></div></div></div>
       <div><label class="f">Campaign name</label><input class="in" id="fName"></div>
     </div>
     <div class="work" style="margin-top:12px">
@@ -360,11 +362,13 @@ const BRAND='Khalifa Attar & Perfumes';
 let db,storageOk=true;
 
 /* ---------- storage ---------- */
-function fresh(){return{version:1,contacts:[],optOut:[],campaigns:[],sentTpl:{},settings:{cooldown:15,dailyLimit:50,website:'https://khalifaattarperfumes.com',instagram:'https://instagram.com/khalifa_attar_perfumes',sign:true,stop:true,lang:'en'}}}
+function fresh(){return{version:1,contacts:[],optOut:[],campaigns:[],sentTpl:{},settings:{cooldown:15,dailyLimit:50,website:'https://khalifaattarperfumes.com',newProducts:[],instagram:'https://instagram.com/khalifa_attar_perfumes',sign:true,stop:true,lang:'en'}}}
 function normalize(d){
   let x=Object.assign(fresh(),d||{});x.settings=Object.assign(fresh().settings,x.settings||{});
   ['contacts','optOut','campaigns'].forEach(k=>{if(!Array.isArray(x[k]))x[k]=[]});if(!x.sentTpl||typeof x.sentTpl!=='object')x.sentTpl={};
   if(x.settings.lang!=='hi')x.settings.lang='en';
+  if(!Array.isArray(x.settings.newProducts))x.settings.newProducts=[];
+  x.settings.newProducts=x.settings.newProducts.map(p=>String(p||'').replace(/\s+/g,' ').trim()).filter(Boolean);
   return x;
 }
 function load(){let d=null;try{d=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){storageOk=false}db=normalize(d)}
@@ -610,7 +614,7 @@ function filteredTpls(){
   return TEMPLATES.filter(t=>(ui.cat==='all'||t.cat===ui.cat)&&(!q||t.en.toLowerCase().includes(q)||t.hi.toLowerCase().includes(q)||t.label.toLowerCase().includes(q)));
 }
 function renderCats(){$('catChips').innerHTML=CATS.map(([k,t])=>`<button class="chip ${ui.cat===k?'on':''}" onclick="selectCat('${k}')">${t} <span style="opacity:.7">${k==='all'?TEMPLATES.length:TEMPLATES.filter(x=>x.cat===k).length}</span></button>`).join('')}
-function selectCat(k){ui.cat=k;tplLimit=40;renderCats();renderTpls();let f=filteredTpls();if(f.length&&(!ui.tplId||!f.some(t=>t.id===ui.tplId)))chooseTpl(f[0].id);else preview()}
+function selectCat(k){ui.cat=k;if(k==='arrival'&&db.settings.newProducts.length&&!db.settings.newProducts.includes($('fProduct').value)){ui.lastProduct=db.settings.newProducts[0];renderProducts(ui.lastProduct)}tplLimit=40;renderCats();renderTpls();let f=filteredTpls();if(f.length&&(!ui.tplId||!f.some(t=>t.id===ui.tplId)))chooseTpl(f[0].id);else preview()}
 function renderTpls(){
   let f=filteredTpls();
   $('tplList').innerHTML=f.slice(0,tplLimit).map(t=>`<button class="tpl ${t.id===ui.tplId?'on':''}" onclick="chooseTpl(${t.id})"><div class="h"><span>#${t.id} · ${esc(tplTitle(t))}</span><span>${LANG_NAME[lang()]}</span></div><div class="x">${esc(tplText(t))}</div></button>`).join('')||'<div class="empty">No templates found</div>';
@@ -643,6 +647,32 @@ function fill(text,c,vals,l){
   if(st.sign)out+=`\n\n— *${BRAND}*`+(v.website?`\n🛍️ ${v.website}`:'')+(st.instagram?`\n📸 ${st.instagram}`:'');
   if(st.stop)out+='\n\n'+(l==='hi'?'_Offers nahi chahiye toh STOP likh dijiye._':"_Reply STOP if you don't want offers._");
   return out;
+}
+/* ---------- products: catalogue + new arrivals typed in by hand ---------- */
+const ADD_PRODUCT='__add__';
+function renderProducts(sel){
+  let cur=sel??$('fProduct').value;let np=db.settings.newProducts;
+  $('fProduct').innerHTML=(np.length?`<optgroup label="New arrivals">${np.map(p=>`<option>${esc(p)}</option>`).join('')}</optgroup>`:'')
+    +`<optgroup label="Our products">${PRODUCTS.map(p=>`<option>${esc(p)}</option>`).join('')}</optgroup>`
+    +`<option value="${ADD_PRODUCT}">＋ Add a new product…</option>`;
+  let all=np.concat(PRODUCTS);$('fProduct').value=all.includes(cur)?cur:all[0];
+  ui.lastProduct=$('fProduct').value;$('prodDel').classList.toggle('hide',!np.includes(ui.lastProduct));
+}
+function prodChange(){
+  if($('fProduct').value===ADD_PRODUCT){$('prodAdd').classList.remove('hide');$('newProd').value='';$('newProd').focus();renderProducts(ui.lastProduct);return}
+  ui.lastProduct=$('fProduct').value;$('prodDel').classList.toggle('hide',!db.settings.newProducts.includes(ui.lastProduct));preview();
+}
+function addProduct(){
+  let n=$('newProd').value.replace(/\s+/g,' ').trim();if(!n)return $('newProd').focus();
+  let all=db.settings.newProducts.concat(PRODUCTS),hit=all.find(p=>p.toLowerCase()===n.toLowerCase());
+  if(!hit){db.settings.newProducts.unshift(n);save();hit=n;toast('✓ '+n+' added to new arrivals')}else toast(hit+' is already in the list');
+  $('prodAdd').classList.add('hide');ui.lastProduct=hit;renderProducts(hit);preview();
+}
+function cancelAddProduct(){$('prodAdd').classList.add('hide')}
+function removeProduct(){
+  let p=$('fProduct').value;if(!db.settings.newProducts.includes(p))return;
+  if(!confirm(`Remove "${p}" from new arrivals?`))return;
+  db.settings.newProducts=db.settings.newProducts.filter(x=>x!==p);save();ui.lastProduct=null;renderProducts();preview();toast('Removed '+p);
 }
 function currentVals(){return{offer:$('fOffer').value.trim(),coupon:$('fCode').value.trim().toUpperCase(),valid_till:validText($('fValid').value),product:$('fProduct').value,website:db.settings.website}}
 function preview(){
@@ -735,7 +765,7 @@ function removeOpt(i){let o=db.optOut[i];if(!o||!confirm(`Remove ${o.name} from 
 function loadSettings(){let s=db.settings;$('sCool').value=s.cooldown;$('sLimit').value=s.dailyLimit;$('sWeb').value=s.website;$('sInsta').value=s.instagram;$('sSign').checked=!!s.sign;$('sStop').checked=!!s.stop;renderLang()}
 function saveSettings(){let s=db.settings;s.cooldown=Math.min(90,Math.max(1,parseInt($('sCool').value)||15));s.dailyLimit=Math.min(300,Math.max(5,parseInt($('sLimit').value)||50));s.website=$('sWeb').value.trim();s.instagram=$('sInsta').value.trim();s.sign=$('sSign').checked;s.stop=$('sStop').checked;lastIdx=null;save();loadSettings();renderAll();toast('✓ Settings saved')}
 function backup(){download('khalifa-marketing-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(db,null,1),'application/json');toast('⬇️ Backup downloading')}
-function restore(inp){let f=inp.files[0];if(!f)return;let rd=new FileReader();rd.onload=()=>{try{let x=JSON.parse(rd.result);if(!x||!Array.isArray(x.contacts)||!Array.isArray(x.campaigns))throw Error('This does not look like a Khalifa Marketing backup');if(!confirm(`The backup has ${plural(x.contacts.length,'contact')} and ${plural(x.campaigns.length,'campaign')}. Replace the current data?`))return;db=normalize(x);save();loadSettings();renderAll();toast('✓ Backup restored')}catch(e){alert('Restore failed: '+e.message)}inp.value=''};rd.readAsText(f)}
+function restore(inp){let f=inp.files[0];if(!f)return;let rd=new FileReader();rd.onload=()=>{try{let x=JSON.parse(rd.result);if(!x||!Array.isArray(x.contacts)||!Array.isArray(x.campaigns))throw Error('This does not look like a Khalifa Marketing backup');if(!confirm(`The backup has ${plural(x.contacts.length,'contact')} and ${plural(x.campaigns.length,'campaign')}. Replace the current data?`))return;db=normalize(x);save();loadSettings();renderProducts();renderAll();toast('✓ Backup restored')}catch(e){alert('Restore failed: '+e.message)}inp.value=''};rd.readAsText(f)}
 function resetAll(){if(!confirm('All contacts, history and the STOP list will be deleted. Did you download a backup first?'))return;if(prompt('Are you sure? Type DELETE')!=='DELETE')return;db=fresh();save();loadSettings();renderAll();toast('All data deleted')}
 
 /* ---------- render ---------- */
@@ -753,7 +783,7 @@ document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',
 /* ---------- init ---------- */
 load();
 if('contacts' in navigator&&'select' in navigator.contacts)$('pickBtn').classList.remove('hide');
-$('fProduct').innerHTML=PRODUCTS.map(p=>`<option>${esc(p)}</option>`).join('');
+renderProducts();
 let d0=new Date();d0.setDate(d0.getDate()+7);$('fValid').value=d0.toISOString().slice(0,10);
 $('fCode').value='KAF-'+new Date().toLocaleString('en-US',{month:'short'}).toUpperCase()+'10';
 $('tplTotal').textContent=TEMPLATES.length;

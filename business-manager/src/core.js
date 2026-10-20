@@ -410,7 +410,7 @@ async function api(action, payload, url, key) {
     return j;
   } catch (e) {
     if (e.name === 'AbortError') throw new Error('Sheet took too long to answer');
-    if (e instanceof TypeError) throw new Error('Could not reach the Sheet — check internet');
+    if (e instanceof TypeError) throw new Error(navigator.onLine ? 'Could not reach the Sheet — check the Web App URL (it must end with /exec) and that access is set to “Anyone”' : 'No internet — connect and try again');
     throw e;
   } finally { clearTimeout(tm); }
 }

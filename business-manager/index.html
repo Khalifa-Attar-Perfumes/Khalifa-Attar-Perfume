@@ -1,0 +1,1805 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Khalifa Business Manager</title>
+<meta name="description" content="Billing, customers, reports and cash for Khalifa Attar & Perfumes">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1c1410">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Khalifa BM">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/manrope.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Manrope";src:url("fonts/manrope.woff2") format("woff2");font-weight:200 800;font-display:swap}
+@font-face{font-family:"Cormorant";src:url("fonts/cormorant.woff2") format("woff2");font-weight:300 700;font-display:swap}
+:root{
+  /* Brand tokens — swap these when the final Khalifa palette arrives */
+  --oud:#1c1410;--oud-2:#2a2019;--oud-3:#3a2d23;
+  --brass:#b8924f;--brass-dk:#94733a;--brass-lt:#e7d5ae;--brass-wash:#f4ead6;
+  --pearl:#f3f1ec;--card:#ffffff;--ink:#211a15;--muted:#786d63;--line:#e6e1d8;
+  --jade:#2e7d62;--jade-wash:#e3f1eb;--rose:#9e2f4a;--rose-wash:#f6e4e8;--sky:#2f5d8a;
+  --r-lg:22px;--r-md:14px;--r-sm:10px;
+  --shadow:0 1px 2px rgba(28,20,16,.06),0 8px 24px rgba(28,20,16,.07);
+  --tab-h:68px;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);
+  --font:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:"Cormorant","Cormorant Garamond",Georgia,serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:var(--font);background:var(--pearl);color:var(--ink);font-size:15px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1,"lnum" 1;overscroll-behavior-y:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.hide{display:none!important}
+.money{font-variant-numeric:tabular-nums lining-nums}
+.serif{font-family:var(--serif)}
+
+/* ---------- app shell ---------- */
+#app{min-height:100%;display:flex;flex-direction:column}
+.top{background:var(--oud);color:#f4ecdc;padding:calc(var(--safe-t) + 14px) 18px 18px;position:relative}
+.top.tall{padding-bottom:30px;border-radius:0 0 28px 28px;
+  background:var(--oud) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23b8924f' stroke-opacity='.13' stroke-width='1'%3E%3Cpath d='M28 6l6.4 15.6L50 28l-15.6 6.4L28 50l-6.4-15.6L6 28l15.6-6.4z'/%3E%3Cpath d='M12.4 12.4h31.2v31.2H12.4z' transform='rotate(45 28 28)'/%3E%3Ccircle cx='28' cy='28' r='5'/%3E%3C/g%3E%3C/svg%3E") 0 0/56px 56px}
+.top-row{display:flex;align-items:center;gap:12px}
+.top h1{font:600 19px/1.2 var(--font);margin:0;letter-spacing:-.01em}
+.top .sub{color:#bfae93;font-size:13px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--oud-3);display:grid;place-items:center;
+  font-weight:700;color:var(--brass-lt);border:1px solid #5a4636;flex:none}
+.back{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--oud-2);color:var(--brass-lt);flex:none}
+.grow{flex:1;min-width:0}
+.chip-sync{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;font-size:12px;
+  font-weight:600;background:var(--oud-2);color:#d9c9ab;border:1px solid #47382b;white-space:nowrap}
+.chip-sync i{width:7px;height:7px;border-radius:50%;background:#8b7b68;display:inline-block}
+.chip-sync.ok i{background:#5fbf95}.chip-sync.pending i{background:#e2b553}.chip-sync.err i{background:#e0607b}
+.chip-sync.busy i{background:#e2b553;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.25}}
+main{flex:1;padding:16px 16px calc(var(--tab-h) + var(--safe-b) + 24px)}
+main.noTab{padding-bottom:calc(var(--safe-b) + 230px)}
+
+/* ---------- tab bar ---------- */
+.tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);
+  background:var(--oud);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;z-index:30;
+  border-top:1px solid #33271e}
+.tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;color:#9d8c76;font-size:11px;font-weight:600;height:100%;justify-content:center}
+.tabs button.on{color:var(--brass-lt)}
+.tabs svg{width:23px;height:23px}
+.tabs .plus{position:relative}
+.tabs .plus span.disc{width:58px;height:58px;border-radius:50%;background:linear-gradient(160deg,#d2ae6c,var(--brass) 55%,var(--brass-dk));
+  display:grid;place-items:center;color:var(--oud);margin-top:-30px;box-shadow:0 6px 18px rgba(184,146,79,.45),0 0 0 6px var(--oud)}
+.tabs .plus span.disc svg{width:28px;height:28px}
+
+/* ---------- cards, lists ---------- */
+.card{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:16px}
+.stack>*+*{margin-top:12px}
+.h2{font-size:13px;font-weight:700;color:var(--muted);margin:22px 4px 10px;display:flex;align-items:center;gap:8px}
+.h2 .link{margin-left:auto;color:var(--brass-dk);font-weight:700;font-size:13px}
+.list{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line);width:100%;text-align:left}
+.row:first-child{border-top:0}
+.row .t{font-weight:650;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .amt{font-weight:700;text-align:right;white-space:nowrap}
+.empty{padding:28px 20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--pearl);color:var(--muted)}
+.tag.jade{background:var(--jade-wash);color:var(--jade)}.tag.rose{background:var(--rose-wash);color:var(--rose)}
+.tag.brass{background:var(--brass-wash);color:var(--brass-dk)}.tag.void{background:#eee;color:#888;text-decoration:line-through}
+.ucode{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:800;flex:none;background:var(--brass-wash);color:var(--brass-dk)}
+.ucode.H{background:#e6eef5;color:var(--sky)}.ucode.M{background:var(--jade-wash);color:var(--jade)}
+
+/* ---------- forms ---------- */
+label.f{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:0 2px 6px}
+.in{width:100%;height:50px;border-radius:var(--r-md);border:1.5px solid var(--line);background:#fff;padding:0 14px;font-size:16px;outline:none}
+.in:focus{border-color:var(--brass)}
+.in::placeholder,.mini input::placeholder{color:#b3a99e;font-weight:500;letter-spacing:0}
+textarea.in{height:auto;padding:12px 14px;min-height:80px}
+.in.big{height:58px;font-size:20px;font-weight:700;letter-spacing:.02em}
+.prefix{position:relative}.prefix>span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700}
+.prefix .in{padding-left:52px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 2px 0}
+.err{color:var(--rose);font-size:13px;font-weight:600;margin-top:6px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{height:42px;padding:0 15px;border-radius:999px;border:1.5px solid var(--line);background:#fff;font-weight:650;font-size:14px}
+.seg button.on{background:var(--oud);border-color:var(--oud);color:var(--brass-lt)}
+.btn{height:52px;border-radius:var(--r-md);padding:0 20px;font-weight:750;font-size:15.5px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--oud);color:var(--brass-lt);width:100%;text-decoration:none}
+.btn.brass{background:linear-gradient(160deg,#d1ac69,var(--brass) 60%,var(--brass-dk));color:#1c1410}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.btn.wa{background:#1f8f5f;color:#fff}
+.btn.danger{background:#fff;color:var(--rose);border:1.5px solid #ecc9d1}
+.btn.sm{height:40px;font-size:14px;padding:0 14px;width:auto;border-radius:12px}
+.btn:disabled{opacity:.45}
+.btn svg{width:20px;height:20px}
+.icon-btn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--pearl);color:var(--ink);flex:none}
+.icon-btn svg{width:20px;height:20px}
+
+/* ---------- home ---------- */
+.today{margin-top:18px}
+.today .lbl{color:#bfae93;font-size:13px;font-weight:600}
+.today .num{font:600 52px/1.05 var(--serif);color:var(--brass-lt);letter-spacing:.01em;margin-top:2px}
+.today .meta{color:#cbbba0;font-size:13px;margin-top:4px}
+.share{margin-top:16px}
+.share .bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--oud-3)}
+.share .bar i{display:block;height:100%}
+.share .legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;font-size:12.5px;color:#d8c7a8}
+.share .legend b{color:#f4ecdc;font-weight:700}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:-16px;position:relative;z-index:2}
+.kpi{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:14px 15px;text-align:left}
+.kpi .k{font-size:12.5px;color:var(--muted);font-weight:650}
+.kpi .v{font-size:22px;font-weight:800;margin-top:2px;letter-spacing:-.01em}
+.kpi .v.rose{color:var(--rose)}
+
+/* ---------- product search & lines ---------- */
+.search{position:relative}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--muted)}
+.search .in{padding-left:44px}
+.results{margin-top:8px}
+.prod{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;background:#fff;border-radius:var(--r-md);border:1.5px solid var(--line);text-align:left}
+.prod+.prod{margin-top:8px}
+.quick{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none}
+.quick::-webkit-scrollbar{display:none}
+.qcard{flex:none;width:236px;scroll-snap-align:start;background:#fff;border:1.5px solid var(--line);border-radius:var(--r-md);padding:12px 13px;display:flex;flex-direction:column;gap:2px}
+.qcard b{font-size:15px}
+.qcard .sizes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.qcard .size{padding:6px 10px;font-size:12.5px}
+.prod .pm{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--brass-wash);color:var(--brass-dk);font:700 18px var(--serif);flex:none}
+.prod .sizes{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.size{padding:7px 12px;border-radius:999px;background:var(--pearl);font-weight:700;font-size:13px;border:1.5px solid transparent}
+.size:active,.size.on{background:var(--oud);color:var(--brass-lt)}
+.line{background:#fff;border-radius:var(--r-md);border:1.5px solid var(--line);padding:12px 14px}
+.line+.line{margin-top:8px}
+.line .top-l{display:flex;align-items:flex-start;gap:10px}
+.line .nm{font-weight:750}.line .sz{color:var(--muted);font-size:13px}
+.line .ctrl{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-top:10px;align-items:end}
+.qty{display:flex;align-items:center;height:44px;border-radius:12px;border:1.5px solid var(--line);overflow:hidden}
+.qty button{width:40px;height:100%;font-size:20px;font-weight:700;color:var(--brass-dk)}
+.qty span{min-width:30px;text-align:center;font-weight:800}
+.mini label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin:0 0 3px 2px}
+.mini input{width:100%;height:44px;border-radius:12px;border:1.5px solid var(--line);padding:0 10px;font-weight:700;font-size:15px;outline:none}
+.mini input:focus{border-color:var(--brass)}
+.line .amt{font-weight:800;white-space:nowrap}
+.custbox .found{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--brass-wash);font-size:13.5px}
+
+/* ---------- the receipt slip (new bill) ---------- */
+.slip{position:fixed;left:10px;right:10px;bottom:calc(var(--safe-b) + 10px);z-index:40;background:#fffdf8;
+  border-radius:4px 4px 18px 18px;box-shadow:0 -6px 30px rgba(28,20,16,.18);padding:18px 16px 14px;
+  --zz:radial-gradient(circle at 8px 0,transparent 7px,#000 7.5px) -8px 0/16px 100% repeat-x;
+  -webkit-mask:var(--zz);mask:var(--zz);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.slip .handle{display:flex;align-items:center;gap:12px}
+.slip .count{font-size:12.5px;color:var(--muted);font-weight:700}
+.slip .total{font:600 34px/1 var(--serif);letter-spacing:.01em}
+.slip .btn{width:auto;min-width:140px}
+.slip .detail{border-top:1.5px dashed #d9cfbd;margin-top:12px;padding-top:10px;font-size:14px;display:none}
+.slip.open .detail{display:block}
+.slip .detail div{display:flex;justify-content:space-between;padding:3px 0}
+.slip .detail .due{color:var(--rose);font-weight:700}
+.slip .chev{transition:transform .25s}.slip.open .chev{transform:rotate(180deg)}
+.seal{position:fixed;inset:0;display:grid;place-items:center;z-index:80;pointer-events:none}
+.seal .wax{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d9b878,var(--brass) 45%,#7d5f2c);
+  box-shadow:0 10px 40px rgba(0,0,0,.35),inset 0 0 0 7px rgba(255,255,255,.12),inset 0 0 0 9px rgba(0,0,0,.12);
+  display:grid;place-items:center;color:#3b2a12;font:700 64px var(--serif);animation:stamp .55s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes stamp{0%{transform:scale(2.4) rotate(-18deg);opacity:0}60%{opacity:1}100%{transform:scale(1) rotate(-8deg);opacity:1}}
+@media (prefers-reduced-motion:reduce){.seal .wax{animation:none}.slip{transition:none}}
+
+/* ---------- saved screen ---------- */
+.saved{text-align:center;padding-top:10px}
+.saved .ok{width:84px;height:84px;margin:12px auto 10px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 35% 30%,#d9b878,var(--brass) 50%,#7d5f2c);color:#2b1e0d;font:700 40px var(--serif);transform:rotate(-8deg)}
+.saved .bn{font-weight:800;letter-spacing:.04em;color:var(--brass-dk)}
+.saved .tot{font:600 44px/1.1 var(--serif);margin:4px 0}
+
+/* ---------- overlay pages & sheets ---------- */
+.page{position:fixed;inset:0;background:var(--pearl);z-index:50;overflow-y:auto;animation:slidein .22s ease-out}
+@keyframes slidein{from{transform:translateX(24px);opacity:.4}to{transform:none;opacity:1}}
+.scrim{position:fixed;inset:0;background:rgba(20,14,10,.5);z-index:60;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--card);border-radius:24px 24px 0 0;
+  padding:10px 18px calc(var(--safe-b) + 18px);max-height:92vh;overflow-y:auto;animation:up .25s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(40px);opacity:.5}}
+.sheet .grab{width:44px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.sheet h3{margin:4px 0 14px;font-size:19px;font-weight:800}
+.sheet .stack{margin-bottom:6px}
+.toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + var(--safe-b) + 22px);transform:translateX(-50%);z-index:90;
+  background:var(--oud);color:var(--brass-lt);padding:11px 18px;border-radius:999px;font-weight:650;font-size:14px;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:90vw;text-align:center;animation:fade .2s}
+body:has(.slip) .toast{bottom:calc(var(--safe-b) + 150px)}
+
+/* WhatsApp share step */
+.wa-step{text-align:center}
+.wa-step .num{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--jade-wash);color:var(--jade);font-weight:800;margin-bottom:6px}
+.wa-step h3{margin:2px 0 6px}
+.wa-step .help{background:var(--pearl);border-radius:14px;padding:12px 14px;font-size:14px;margin:12px 0;text-align:left}
+.wa-step .help b{color:var(--jade)}
+.big-share{height:66px;font-size:18px;border-radius:18px}
+
+/* invoice preview */
+.inv-wrap{background:#e9e5dd;border-radius:var(--r-lg);padding:14px;overflow:hidden}
+.inv-scale{transform-origin:top left}
+
+/* lock + keypad */
+.lock{min-height:100vh;background:var(--oud);color:#f2e8d6;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px}
+.lock .brand{font:600 34px var(--serif);color:var(--brass-lt)}
+.dots{display:flex;gap:16px;margin:26px 0 30px}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--brass);display:block}
+.dots i.on{background:var(--brass)}
+.dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pad{display:grid;grid-template-columns:repeat(3,76px);gap:14px}
+.pad button{width:76px;height:76px;border-radius:50%;background:var(--oud-2);color:#f2e8d6;font-size:28px;font-weight:600;border:1px solid #3c2f25}
+.pad button:active{background:var(--oud-3)}
+.pad.light button{background:var(--pearl);color:var(--ink);border:0}
+
+/* setup */
+.setup{min-height:100vh;background:var(--oud);color:#efe4cf;padding:calc(var(--safe-t) + 40px) 22px 40px}
+.setup .logo{width:150px;display:block;margin-bottom:22px}
+.setup h1{font:600 38px/1.05 var(--serif);color:var(--brass-lt);margin:0 0 8px}
+.setup p{color:#c4b294;margin:0 0 24px}
+.setup .panel{background:#fff;color:var(--ink);border-radius:24px;padding:20px}
+.who{display:grid;gap:10px}
+.who button{display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1.5px solid var(--line);text-align:left;font-weight:700;font-size:17px}
+.who button.on{border-color:var(--brass);background:var(--brass-wash)}
+.steps{display:flex;gap:6px;margin-bottom:18px}.steps i{flex:1;height:4px;border-radius:9px;background:#4a3a2c}.steps i.on{background:var(--brass)}
+
+/* tiles (more) */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:16px;text-align:left;min-height:104px;display:flex;flex-direction:column;justify-content:space-between}
+.tile svg{width:26px;height:26px;color:var(--brass-dk)}
+.tile b{font-size:15px}.tile span{color:var(--muted);font-size:12.5px}
+
+/* reports */
+.bars .b{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center;padding:6px 0;font-size:13.5px}
+.bars .track{height:10px;border-radius:9px;background:var(--pearl);overflow:hidden}
+.bars .track i{display:block;height:100%;background:var(--brass);border-radius:9px}
+table.t{width:100%;border-collapse:collapse;font-size:13.5px}
+table.t th{text-align:right;color:var(--muted);font-weight:700;font-size:11.5px;padding:6px 4px}
+table.t td{text-align:right;padding:9px 4px;border-top:1px solid var(--line);font-weight:650}
+table.t th:first-child,table.t td:first-child{text-align:left}
+.scrollx{overflow-x:auto;margin:0 -4px;padding:0 4px}
+
+/* item composer (new bill) */
+.composer{padding:14px}
+.cats{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -2px}
+.cats::-webkit-scrollbar{display:none}
+.cats button{flex:none}
+.sizes-seg button{height:40px;padding:0 13px;font-size:14px}
+.sugs{display:flex;gap:6px;flex-wrap:wrap}
+.sugs .size{border:1.5px solid var(--line);background:#fff}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="tabs"></div>
+<div id="pages"></div>
+<div id="sheets"></div>
+<noscript><p style="padding:24px">Please enable JavaScript to use Khalifa Business Manager.</p></noscript>
+<script src="vendor/html2canvas.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   Khalifa Business Manager — core (data, sync, money maths, PDF, WhatsApp)
+   ===================================================================== */
+const APP_VERSION = '1.0.0';
+const DB_NAME = 'khalifa-bm';
+const TABLES = ['Customers', 'Sales', 'Payments', 'Expenses', 'Transfers', 'AuditLog'];
+const NUMERIC = new Set(['rev', 'serverUpdatedAt', 'subTotal', 'lineDiscount', 'billDiscount', 'gstPercent',
+  'gstAmount', 'grandTotal', 'paidAtBill', 'amount', 'qty', 'rate', 'discount', 'costPrice', 'price']);
+const MODES = ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Credit'];
+const BANK_MODES = new Set(['UPI', 'Card', 'Bank Transfer']);
+const EXP_CATS = ['Stock purchase', 'Bottles & packing', 'Rent', 'Salary', 'Delivery', 'Marketing', 'Utilities', 'Other'];
+const DEFAULT_USERS = [{ code: 'Y', name: 'Yaseen', active: 'TRUE' }, { code: 'H', name: 'Huzaifa', active: 'TRUE' }, { code: 'M', name: 'Mushtaq', active: 'TRUE' }];
+
+/* ---------------- small utils ---------------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const P = x => Math.round((Number(x) || 0) * 100);            // rupees → paise (integer maths everywhere)
+const R = p => Math.round(p) / 100;                             // paise → rupees
+const INR = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+const moneyP = p => (p < 0 ? '−' : '') + '₹' + INR.format(Math.abs(Math.round(p)) / 100);
+const money = r => moneyP(P(r));
+const nowISO = () => new Date().toISOString();
+const clone = o => JSON.parse(JSON.stringify(o));
+function uid() { return (S.me ? S.me.code : 'X') + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function dayKey(iso) { const d = new Date(iso); if (isNaN(d)) return ''; return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function todayKey() { return dayKey(new Date().toISOString()); }
+function fmtDate(iso) { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
+function fmtTime(iso) { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }).replace(/[\u202f\u00a0]/g, ' '); }
+function fmtPhone(p) { p = String(p || ''); return p.length === 12 ? '+91 ' + p.slice(2, 7) + ' ' + p.slice(7) : p; }
+// Accepts 10-digit Indian mobiles with or without +91 / 0. Returns '91XXXXXXXXXX' or ''.
+function normPhone(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+  if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  return /^[6-9]\d{9}$/.test(d) ? '91' + d : '';
+}
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/* ---------------- IndexedDB ---------------- */
+const idb = {
+  db: null, mem: { rec: new Map(), meta: new Map() }, ok: true,
+  open() {
+    return new Promise(res => {
+      let req;
+      try { req = indexedDB.open(DB_NAME, 1); } catch (e) { this.ok = false; return res(); }
+      req.onupgradeneeded = () => { const d = req.result; d.createObjectStore('rec'); d.createObjectStore('meta'); };
+      req.onsuccess = () => { this.db = req.result; res(); };
+      req.onerror = () => { this.ok = false; res(); };
+    });
+  },
+  tx(store, mode, fn) {
+    if (!this.ok) return Promise.resolve(fn(null));
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode), s = t.objectStore(store);
+      let out; out = fn(s);
+      t.oncomplete = () => res(out && out.result !== undefined && out instanceof IDBRequest ? out.result : out);
+      t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  },
+  async getAll(store) {
+    if (!this.ok) return [...this.mem[store].entries()];
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, 'readonly'), s = t.objectStore(store);
+      const ks = s.getAllKeys(), vs = s.getAll();
+      t.oncomplete = () => res(ks.result.map((k, i) => [k, vs.result[i]]));
+      t.onerror = () => rej(t.error);
+    });
+  },
+  putMany(store, pairs) {
+    if (!pairs.length) return Promise.resolve();
+    if (!this.ok) { pairs.forEach(([k, v]) => this.mem[store].set(k, v)); return Promise.resolve(); }
+    return this.tx(store, 'readwrite', s => { pairs.forEach(([k, v]) => s.put(v, k)); });
+  },
+  put(store, k, v) { return this.putMany(store, [[k, v]]); },
+  clear(store) { if (!this.ok) { this.mem[store].clear(); return Promise.resolve(); } return this.tx(store, 'readwrite', s => s.clear()); }
+};
+
+/* ---------------- state ---------------- */
+const S = {
+  me: null,                    // {code, name, pinHash, salt}
+  url: '', key: '',
+  t: Object.fromEntries(TABLES.map(t => [t, new Map()])),
+  masters: { Users: [], Products: [], Settings: {} },
+  outbox: new Set(),           // 'Table|id' keys waiting to be pushed
+  cursor: 0, lastSync: 0, lastSeq: {},   // lastSeq: highest bill number used per user code on this phone
+  sync: { state: 'idle', msg: '' }
+};
+
+async function loadAll() {
+  await idb.open();
+  const meta = Object.fromEntries(await idb.getAll('meta'));
+  S.me = meta.profile || null;
+  S.url = (meta.conn && meta.conn.url) || '';
+  S.key = (meta.conn && meta.conn.key) || '';
+  S.outbox = new Set(meta.outbox || []);
+  S.cursor = Number(meta.cursor) || 0;
+  S.lastSync = Number(meta.lastSync) || 0;
+  S.lastSeq = meta.lastSeq && typeof meta.lastSeq === 'object' ? meta.lastSeq : {};
+  if (meta.masters) applyMasters(meta.masters, false);
+  for (const [k, v] of await idb.getAll('rec')) {
+    const t = k.slice(0, k.indexOf('|'));
+    if (S.t[t]) S.t[t].set(v.id, v);
+  }
+}
+const saveMeta = (k, v) => idb.put('meta', k, v);
+const saveOutbox = () => saveMeta('outbox', [...S.outbox]);
+const putRecs = list => idb.putMany('rec', list.map(([t, r]) => [t + '|' + r.id, r]));
+
+/* records: every change bumps rev, stamps who/when and goes to the outbox */
+function stamp(row, isNew) {
+  const now = nowISO();
+  if (isNew) { row.createdAt = now; row.createdBy = S.me.name; row.deleted = false; row.rev = 0; }
+  row.updatedAt = now; row.updatedBy = S.me.name; row.rev = (Number(row.rev) || 0) + 1;
+  return row;
+}
+async function saveRecs(list) {           // list of [table, row, isNew]
+  const pairs = list.map(([t, r, isNew]) => { stamp(r, isNew); S.t[t].set(r.id, r); S.outbox.add(t + '|' + r.id); return [t, r]; });
+  await putRecs(pairs); await saveOutbox();
+  scheduleSync();
+}
+
+function castRow(row) {
+  const o = {};
+  for (const k in row) {
+    let v = row[k];
+    if (NUMERIC.has(k)) v = v === '' || v == null ? 0 : Number(v);
+    else if (k === 'deleted') v = v === true || String(v).toLowerCase() === 'true';
+    else v = v == null ? '' : String(v);
+    o[k] = v;
+  }
+  return o;
+}
+const isNewer = (a, b) => a.rev > b.rev || (a.rev === b.rev && String(a.updatedAt) >= String(b.updatedAt));
+
+function applyMasters(m, persist = true) {
+  if (!m) return;
+  const yes = v => String(v).toUpperCase() !== 'FALSE' && v !== false && String(v) !== '0';
+  if (m.Users) S.masters.Users = m.Users.filter(u => u.code && u.name).map(u => ({ code: String(u.code).trim().toUpperCase(), name: String(u.name).trim(), active: yes(u.active ?? 'TRUE') }));
+  if (m.Products) S.masters.Products = m.Products.filter(p => p.name).map(p => ({
+    name: String(p.name).trim(), size: String(p.size ?? '').trim(), type: String(p.type || '').trim(),
+    price: Number(String(p.price).replace(/[^\d.]/g, '')) || 0,                 // "₹699" → 699
+    costPrice: p.costPrice === '' || p.costPrice == null ? null : (Number(String(p.costPrice).replace(/[^\d.]/g, '')) || 0),
+    active: yes(p.active ?? 'TRUE')
+  }));
+  if (m.Settings) {
+    if (Array.isArray(m.Settings)) { const o = {}; m.Settings.forEach(r => { if (r.key) o[String(r.key).trim()] = String(r.value ?? ''); }); S.masters.Settings = o; }
+    else S.masters.Settings = m.Settings;
+  }
+  if (persist) saveMeta('masters', S.masters);
+}
+const setting = (k, d = '') => (S.masters.Settings[k] ?? '') === '' ? d : S.masters.Settings[k];
+const gstOn = () => String(setting('gstEnabled', 'FALSE')).toUpperCase() === 'TRUE';
+const users = () => (S.masters.Users.length ? S.masters.Users : DEFAULT_USERS.map(u => ({ ...u, active: true }))).filter(u => u.active);
+const userName = code => (users().find(u => u.code === code) || {}).name || code;
+
+/* ---------------- money maths (all in paise) ---------------- */
+function calcBill(lines, billDiscount, gstPercent) {
+  let sub = 0, lineDisc = 0;
+  const items = lines.map(l => {
+    const qty = Math.max(0, Math.round(Number(l.qty) || 0));
+    const gross = P(l.rate) * qty, d = Math.min(P(l.discount), gross);
+    sub += gross; lineDisc += d;
+    return { ...l, qty, amountP: gross - d };
+  });
+  const afterLine = sub - lineDisc;
+  const billDisc = Math.min(Math.max(P(billDiscount), 0), afterLine);
+  const taxable = afterLine - billDisc;
+  const gst = gstPercent ? Math.round(taxable * Number(gstPercent) / 100) : 0;
+  return { items, sub, lineDisc, billDisc, taxable, gst, grand: taxable + gst };
+}
+const liveSale = s => !s.deleted && s.status !== 'void';
+const livePay = p => !p.deleted && p.status !== 'void';
+const liveRow = r => !r.deleted && r.status !== 'void';
+const salesList = () => [...S.t.Sales.values()].filter(liveSale);
+const payList = () => [...S.t.Payments.values()].filter(livePay);
+function saleItems(s) { try { return JSON.parse(s.itemsJson || '[]'); } catch (e) { return []; } }
+function salePaidP(s) { return payList().filter(p => p.saleId === s.id).reduce((a, p) => a + P(p.amount), 0); }
+function customerDueP(cid) {
+  const billed = salesList().filter(s => s.customerId === cid).reduce((a, s) => a + P(s.grandTotal), 0);
+  const paid = payList().filter(p => p.customerId === cid).reduce((a, p) => a + P(p.amount), 0);
+  return billed - paid;
+}
+function customerStats(cid) {
+  const bills = salesList().filter(s => s.customerId === cid).sort((a, b) => b.billDate.localeCompare(a.billDate));
+  return { bills, spentP: bills.reduce((a, s) => a + P(s.grandTotal), 0), dueP: customerDueP(cid) };
+}
+function nextBillNo() {
+  const code = S.me.code; let max = Number(S.lastSeq[code]) || 0;
+  for (const s of S.t.Sales.values()) {
+    if (s.userCode !== code) continue;
+    const n = parseInt(String(s.billNo).split('-')[2], 10);
+    if (n > max) max = n;
+  }
+  return { seq: max + 1, billNo: 'KH-' + code + '-' + String(max + 1).padStart(4, '0') };
+}
+
+/* ---------------- bills ---------------- */
+// form: {lines, phone, name, billDiscount, gstPercent, mode, paid}
+function validateBill(f) {
+  const e = [];
+  const lines = f.lines.filter(l => l.name && Number(l.qty) > 0);
+  if (!lines.length) e.push('Add at least one item');
+  if (!normPhone(f.phone)) e.push('Enter the customer’s 10-digit WhatsApp number');
+  if (!String(f.name || '').trim()) e.push('Enter the customer’s name');
+  if (lines.some(l => !(Number(l.rate) >= 0))) e.push('Check the item prices');
+  return e;
+}
+async function saveBill(f, editingId, reason) {
+  const errs = validateBill(f); if (errs.length) throw new Error(errs[0]);
+  const phone = normPhone(f.phone), cid = 'C' + phone, name = String(f.name).trim();
+  const recs = [];
+  const cust = S.t.Customers.get(cid);
+  if (!cust) recs.push(['Customers', { id: cid, phone, name, notes: '' }, true]);
+  else if (cust.name !== name || cust.deleted) recs.push(['Customers', Object.assign(clone(cust), { name, deleted: false }), false]);
+
+  const lines = f.lines.filter(l => l.name && Number(l.qty) > 0);
+  const gstP = gstOn() ? Number(f.gstPercent) || 0 : 0;
+  const c = calcBill(lines, f.billDiscount, gstP);
+  const items = c.items.map(l => ({ name: l.name, size: l.size || '', type: l.type || '', qty: l.qty, rate: R(P(l.rate)),
+    discount: R(Math.min(P(l.discount), P(l.rate) * l.qty)), amount: R(l.amountP), costPrice: l.costPrice == null || l.costPrice === '' ? null : Number(l.costPrice) }));
+  let paidP = f.mode === 'Credit' ? 0 : Math.min(Math.max(P(f.paid), 0), c.grand);
+  const mode = paidP === 0 ? 'Credit' : f.mode;
+  const fields = {
+    customerId: cid, customerName: name, customerPhone: phone, itemsJson: JSON.stringify(items),
+    subTotal: R(c.sub), lineDiscount: R(c.lineDisc), billDiscount: R(c.billDisc), gstPercent: gstP, gstAmount: R(c.gst),
+    grandTotal: R(c.grand), paidAtBill: R(paidP), paymentMode: mode
+  };
+  let sale;
+  if (editingId) {
+    const old = S.t.Sales.get(editingId); if (!old) throw new Error('Bill not found');
+    sale = Object.assign(clone(old), fields);
+    recs.push(['Sales', sale, false]);
+    const billPay = [...S.t.Payments.values()].find(p => p.saleId === sale.id && p.kind === 'bill' && !p.deleted);
+    if (billPay) {
+      const np = clone(billPay);
+      if (paidP > 0) Object.assign(np, { amount: R(paidP), mode, customerId: cid, status: 'active' });
+      else np.status = 'void';
+      recs.push(['Payments', np, false]);
+    } else if (paidP > 0) {
+      recs.push(['Payments', { id: uid(), saleId: sale.id, customerId: cid, amount: R(paidP), mode, kind: 'bill', receivedBy: S.me.name, date: nowISO(), status: 'active', note: 'Added in bill edit' }, true]);
+    }
+    recs.push(['AuditLog', auditRow('Sales', sale.id, 'edit', reason, old, sale), true]);
+  } else {
+    const nb = nextBillNo();
+    sale = Object.assign({ id: uid(), billNo: nb.billNo, userCode: S.me.code, billDate: nowISO(), status: 'active', voidReason: '', sharedAt: '', sharedBy: '' }, fields);
+    recs.push(['Sales', sale, true]);
+    if (paidP > 0) recs.push(['Payments', { id: uid(), saleId: sale.id, customerId: cid, amount: R(paidP), mode, kind: 'bill', receivedBy: S.me.name, date: sale.billDate, status: 'active', note: '' }, true]);
+    S.lastSeq[S.me.code] = nb.seq; saveMeta('lastSeq', S.lastSeq);
+  }
+  await saveRecs(recs);
+  return S.t.Sales.get(sale.id);
+}
+function auditRow(table, recordId, action, reason, before, after) {
+  return { id: uid(), at: nowISO(), user: S.me.name, tableName: table, recordId, action, reason: reason || '',
+    beforeJson: before ? JSON.stringify(before) : '', afterJson: after ? JSON.stringify(after) : '' };
+}
+async function voidBill(id, reason) {
+  const old = S.t.Sales.get(id); if (!old) return;
+  const s = Object.assign(clone(old), { status: 'void', voidReason: reason });
+  const recs = [['Sales', s, false]];
+  [...S.t.Payments.values()].filter(p => p.saleId === id && livePay(p)).forEach(p => recs.push(['Payments', Object.assign(clone(p), { status: 'void' }), false]));
+  recs.push(['AuditLog', auditRow('Sales', id, 'void', reason, old, s), true]);
+  await saveRecs(recs);
+}
+async function markShared(id) {
+  const s = S.t.Sales.get(id); if (!s) return;
+  await saveRecs([['Sales', Object.assign(clone(s), { sharedAt: nowISO(), sharedBy: S.me.name }), false]]);
+}
+async function receivePayment(cid, amount, mode, note) {
+  const p = P(amount); if (!(p > 0)) throw new Error('Enter an amount');
+  await saveRecs([['Payments', { id: uid(), saleId: '', customerId: cid, amount: R(p), mode, kind: 'due', receivedBy: S.me.name, date: nowISO(), status: 'active', note: note || '' }, true]]);
+}
+async function addExpense(e) {
+  const p = P(e.amount); if (!(p > 0)) throw new Error('Enter an amount');
+  await saveRecs([['Expenses', { id: uid(), date: e.date || nowISO(), category: e.category, amount: R(p), mode: e.mode, paidBy: e.paidBy || S.me.name, note: e.note || '', status: 'active' }, true]]);
+}
+async function addTransfer(t) {
+  const p = P(t.amount); if (!(p > 0)) throw new Error('Enter an amount');
+  if (t.type === 'handover' && (!t.fromUser || !t.toUser || t.fromUser === t.toUser)) throw new Error('Choose two different people');
+  await saveRecs([['Transfers', { id: uid(), date: t.date || nowISO(), type: t.type, fromUser: t.fromUser || '', toUser: t.toUser || '', amount: R(p), note: t.note || '', status: 'active' }, true]]);
+}
+async function voidRow(table, id, reason) {
+  const old = S.t[table].get(id); if (!old) return;
+  const n = Object.assign(clone(old), { status: 'void' });
+  await saveRecs([[table, n, false], ['AuditLog', auditRow(table, id, 'void', reason, old, n), true]]);
+}
+
+/* ---------------- cash & bank ---------------- */
+function cashBook(untilISO) {
+  const until = untilISO || '9999';
+  const names = users().map(u => u.name);
+  const cash = Object.fromEntries(names.map(n => [n, 0]));
+  const add = (n, v) => { if (!(n in cash)) cash[n] = 0; cash[n] += v; };
+  let bank = 0;
+  payList().filter(p => p.date <= until).forEach(p => { if (p.mode === 'Cash') add(p.receivedBy, P(p.amount)); else if (BANK_MODES.has(p.mode)) bank += P(p.amount); });
+  [...S.t.Expenses.values()].filter(liveRow).filter(e => e.date <= until).forEach(e => { if (e.mode === 'Cash') add(e.paidBy, -P(e.amount)); else bank -= P(e.amount); });
+  [...S.t.Transfers.values()].filter(liveRow).filter(t => t.date <= until).forEach(t => {
+    const a = P(t.amount);
+    if (t.type === 'handover') { add(t.fromUser, -a); add(t.toUser, a); }
+    else if (t.type === 'deposit') { add(t.fromUser, -a); bank += a; }
+    else if (t.type === 'withdraw') { bank -= a; add(t.toUser, a); }
+    else if (t.type === 'opening_cash') add(t.toUser, a);
+    else if (t.type === 'opening_bank') bank += a;
+  });
+  const totalCash = Object.values(cash).reduce((a, b) => a + b, 0);
+  return { cash, bank, totalCash };
+}
+function dayClose(day) {
+  const end = new Date(day + 'T23:59:59.999').toISOString();
+  const inDay = iso => dayKey(iso) === day;
+  const book = cashBook(end);
+  return users().map(u => {
+    const n = u.name;
+    const pays = payList().filter(p => p.receivedBy === n && inDay(p.date));
+    const exps = [...S.t.Expenses.values()].filter(liveRow).filter(e => e.paidBy === n && inDay(e.date) && e.mode === 'Cash');
+    const trs = [...S.t.Transfers.values()].filter(liveRow).filter(t => inDay(t.date));
+    return {
+      name: n,
+      cashIn: pays.filter(p => p.mode === 'Cash').reduce((a, p) => a + P(p.amount), 0),
+      bankIn: pays.filter(p => BANK_MODES.has(p.mode)).reduce((a, p) => a + P(p.amount), 0),
+      expenses: exps.reduce((a, e) => a + P(e.amount), 0),
+      handIn: trs.filter(t => t.type === 'handover' && t.toUser === n).reduce((a, t) => a + P(t.amount), 0),
+      handOut: trs.filter(t => t.type === 'handover' && t.fromUser === n).reduce((a, t) => a + P(t.amount), 0),
+      deposited: trs.filter(t => t.type === 'deposit' && t.fromUser === n).reduce((a, t) => a + P(t.amount), 0),
+      closing: book.cash[n] || 0
+    };
+  });
+}
+
+/* ---------------- reports ---------------- */
+function rangeFor(kind, from, to) {
+  const d = new Date(); const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  let a = s, b = new Date(s.getTime() + 86400000 - 1);
+  if (kind === 'week') { const wd = (s.getDay() + 6) % 7; a = new Date(s.getTime() - wd * 86400000); }
+  if (kind === 'month') a = new Date(s.getFullYear(), s.getMonth(), 1);
+  if (kind === 'custom' && from && to) { a = new Date(from + 'T00:00:00'); b = new Date(to + 'T23:59:59.999'); }
+  return { from: a.toISOString(), to: b.toISOString() };
+}
+function report(range, userCode) {
+  const inR = iso => iso >= range.from && iso <= range.to;
+  const uName = userCode ? userName(userCode) : null;
+  const sales = salesList().filter(s => inR(s.billDate) && (!userCode || s.userCode === userCode));
+  const pays = payList().filter(p => inR(p.date) && (!uName || p.receivedBy === uName));
+  let total = 0, profit = 0, costKnown = true;
+  const prods = new Map(), custs = new Map();
+  sales.forEach(s => {
+    total += P(s.grandTotal);
+    const items = saleItems(s);
+    let itemsP = 0, costP = 0;
+    items.forEach(it => {
+      itemsP += P(it.amount);
+      if (it.costPrice == null || it.costPrice === '') costKnown = false; else costP += P(it.costPrice) * it.qty;
+      const k = it.name + (it.size ? ' · ' + it.size : '');
+      const cur = prods.get(k) || { name: k, qty: 0, amt: 0 }; cur.qty += it.qty; cur.amt += P(it.amount); prods.set(k, cur);
+    });
+    profit += itemsP - P(s.billDiscount) - costP;
+    const c = custs.get(s.customerId) || { name: s.customerName, phone: s.customerPhone, amt: 0, bills: 0 };
+    c.amt += P(s.grandTotal); c.bills++; custs.set(s.customerId, c);
+  });
+  const modes = Object.fromEntries(MODES.filter(m => m !== 'Credit').map(m => [m, 0]));
+  pays.forEach(p => { modes[p.mode] = (modes[p.mode] || 0) + P(p.amount); });
+  const perUser = users().map(u => {
+    const us = salesList().filter(s => inR(s.billDate) && s.userCode === u.code);
+    const up = payList().filter(p => inR(p.date) && p.receivedBy === u.name);
+    return {
+      code: u.code, name: u.name,
+      sales: us.reduce((a, s) => a + P(s.grandTotal), 0), bills: us.length,
+      cash: up.filter(p => p.mode === 'Cash').reduce((a, p) => a + P(p.amount), 0),
+      bank: up.filter(p => BANK_MODES.has(p.mode)).reduce((a, p) => a + P(p.amount), 0),
+      dues: us.reduce((a, s) => a + Math.max(0, P(s.grandTotal) - P(s.paidAtBill)), 0),
+      sent: us.filter(s => s.sharedAt).length
+    };
+  });
+  return {
+    sales, total, count: sales.length, avg: sales.length ? Math.round(total / sales.length / 100) * 100 : 0,
+    profit, costKnown, modes,
+    topProducts: [...prods.values()].sort((a, b) => b.amt - a.amt).slice(0, 8),
+    topCustomers: [...custs.values()].sort((a, b) => b.amt - a.amt).slice(0, 8),
+    perUser, dues: duesList()
+  };
+}
+function duesList() {
+  return [...S.t.Customers.values()].filter(c => !c.deleted).map(c => ({ c, dueP: customerDueP(c.id) }))
+    .filter(x => x.dueP > 0).sort((a, b) => b.dueP - a.dueP);
+}
+function billsCSV(sales) {
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const head = ['Bill no', 'Date', 'Time', 'Billed by', 'Customer', 'WhatsApp', 'Items', 'Sub total', 'Discount', 'GST', 'Total', 'Paid at bill', 'Due at bill', 'Payment mode', 'Status', 'Sent on WhatsApp'];
+  const rows = sales.slice().sort((a, b) => a.billDate.localeCompare(b.billDate)).map(s => [
+    s.billNo, dayKey(s.billDate), fmtTime(s.billDate), userName(s.userCode), s.customerName, s.customerPhone,
+    saleItems(s).map(i => `${i.name} ${i.size} x${i.qty}`).join('; '), s.subTotal, R(P(s.lineDiscount) + P(s.billDiscount)), s.gstAmount,
+    s.grandTotal, s.paidAtBill, R(P(s.grandTotal) - P(s.paidAtBill)), s.paymentMode, s.status, s.sharedAt ? 'Yes' : 'No']);
+  return '﻿' + [head, ...rows].map(r => r.map(q).join(',')).join('\r\n');
+}
+
+/* ---------------- sync (row level, never whole-table) ---------------- */
+let syncTimer = null, syncing = false, syncAgain = false;
+function scheduleSync(ms = 1200) { clearTimeout(syncTimer); syncTimer = setTimeout(() => syncNow(), ms); }
+async function api(action, payload, url, key) {
+  url = url || S.url; key = key || S.key;
+  if (!url) throw new Error('Apps Script URL not set');
+  const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 45000);
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action, key, user: S.me ? S.me.name : '' }, payload || {})), redirect: 'follow', signal: ctl.signal });
+    let j; try { j = await res.json(); } catch (e) { throw new Error('Sheet did not answer correctly — check the Apps Script URL'); }
+    if (!j.ok) throw new Error(j.error === 'BAD_KEY' ? 'Secret key does not match the Sheet' : (j.message || j.error || 'Sheet error'));
+    return j;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Sheet took too long to answer');
+    if (e instanceof TypeError) throw new Error('Could not reach the Sheet — check internet');
+    throw e;
+  } finally { clearTimeout(tm); }
+}
+function setSync(state, msg) { S.sync = { state, msg: msg || '' }; if (typeof onSyncChange === 'function') onSyncChange(); }
+async function syncNow() {
+  if (!S.url || !S.me) return;
+  if (syncing) { syncAgain = true; return; }
+  if (!navigator.onLine) { setSync('offline'); return; }
+  syncing = true; setSync('busy');
+  let changed = false, staleCount = 0;
+  try {
+    // 1) push the outbox in batches
+    let keys = [...S.outbox];
+    while (keys.length) {
+      const batch = keys.splice(0, 150);
+      const sent = new Map(), records = [];
+      batch.forEach(k => {
+        const [t, id] = [k.slice(0, k.indexOf('|')), k.slice(k.indexOf('|') + 1)];
+        const r = S.t[t] && S.t[t].get(id);
+        if (!r) { S.outbox.delete(k); return; }
+        sent.set(k, r.rev + '@' + r.updatedAt); records.push({ t, r });
+      });
+      if (!records.length) continue;
+      const j = await api('push', { records });
+      const writes = [];
+      for (const res of j.results) {
+        const k = res.t + '|' + res.id, local = S.t[res.t].get(res.id);
+        const unchanged = local && (local.rev + '@' + local.updatedAt) === sent.get(k);
+        if (res.status === 'ok') {
+          if (local) { local.serverUpdatedAt = res.serverUpdatedAt; writes.push([res.t, local]); }
+          if (unchanged) S.outbox.delete(k);
+        } else if (res.status === 'stale' && res.server) {
+          staleCount++; changed = true;
+          const srv = castRow(res.server); S.t[res.t].set(srv.id, srv); writes.push([res.t, srv]); S.outbox.delete(k);
+        }
+      }
+      await putRecs(writes); await saveOutbox();
+    }
+    // 2) pull everything newer than our cursor (server clock, so phone clocks don't matter)
+    const j = await api('pull', { since: S.cursor });
+    const writes = [];
+    for (const t of Object.keys(j.rows || {})) {
+      if (!S.t[t]) continue;
+      for (const raw of j.rows[t]) {
+        const r = castRow(raw), k = t + '|' + r.id;
+        if (S.outbox.has(k)) continue;                       // our newer local edit goes up next round
+        const cur = S.t[t].get(r.id);
+        if (!cur || isNewer(r, cur)) { S.t[t].set(r.id, r); writes.push([t, r]); changed = true; }
+      }
+    }
+    await putRecs(writes);
+    applyMasters(j.masters);
+    S.cursor = Number(j.cursor) || S.cursor; await saveMeta('cursor', S.cursor);
+    S.lastSync = Date.now(); await saveMeta('lastSync', S.lastSync);
+    setSync(S.outbox.size ? 'pending' : 'ok');
+    if (staleCount && typeof toast === 'function') toast(staleCount === 1 ? 'A record was changed on another phone — updated here' : staleCount + ' records were changed on other phones — updated here');
+  } catch (e) {
+    setSync('err', e.message);
+  } finally {
+    syncing = false;
+    if (changed && typeof onDataChanged === 'function') onDataChanged();
+    if (syncAgain) { syncAgain = false; scheduleSync(300); }
+  }
+}
+
+/* ---------------- PIN ---------------- */
+async function hashPin(pin, salt) {
+  const data = new TextEncoder().encode(salt + ':' + pin + ':khalifa-bm');
+  if (window.crypto && crypto.subtle) {
+    const h = await crypto.subtle.digest('SHA-256', data);
+    return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  let h = 2166136261; for (const b of data) { h ^= b; h = Math.imul(h, 16777619) >>> 0; } return 'f' + h.toString(16);
+}
+async function checkPin(pin) { return !!S.me && (await hashPin(pin, S.me.salt)) === S.me.pinHash; }
+
+/* ---------------- invoice, caption, PDF ---------------- */
+function invoiceHTML(s) {
+  const items = saleItems(s);
+  const paidP = salePaidP(s), dueP = Math.max(0, P(s.grandTotal) - paidP);
+  const disc = P(s.lineDiscount) + P(s.billDiscount);
+  const shop = setting('shopName', 'Khalifa Attar & Perfumes');
+  const addr = setting('address'), phone = setting('phone', '+91 98196 64949'), web = setting('website', 'khalifaattarperfumes.com');
+  const gstin = setting('gstin');
+  const modeTxt = s.paymentMode === 'Credit' && paidP === 0 ? 'Credit' : s.paymentMode;
+  return `<div class="inv" style="width:560px;background:#fff;color:#211a15;font-family:Manrope,Arial,sans-serif;padding:34px 34px 26px;box-sizing:border-box;font-feature-settings:normal;font-variant-numeric:normal;letter-spacing:0">
+  <div style="display:flex;align-items:center;gap:16px;border-bottom:2px solid #b8924f;padding-bottom:16px">
+    <img src="icons/logo.png" alt="" style="width:118px;height:auto;display:block">
+    <div style="flex:1;text-align:right;font-size:12px;line-height:1.55;color:#5d5249">
+      <div style="font:600 21px Cormorant,Georgia,serif;color:#211a15">${esc(shop)}</div>
+      ${addr ? `<div>${esc(addr)}</div>` : ''}<div>${esc(phone)}</div><div>${esc(web)}</div>
+      ${gstOn() && gstin ? `<div>GSTIN: ${esc(gstin)}</div>` : ''}
+    </div>
+  </div>
+  ${s.status === 'void' ? `<div style="margin-top:12px;padding:8px;border:2px solid #9e2f4a;color:#9e2f4a;font-weight:800;text-align:center;letter-spacing:.08em">VOID — ${esc(s.voidReason || '')}</div>` : ''}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;margin:16px 0 14px;font-size:12.5px">
+    <div><span style="color:#8a7d70">Bill no</span><br><b style="font-size:15px">${esc(s.billNo)}</b></div>
+    <div style="text-align:right"><span style="color:#8a7d70">Date</span><br><b>${fmtDate(s.billDate)}, ${fmtTime(s.billDate)}</b></div>
+    <div><span style="color:#8a7d70">Customer</span><br><b>${esc(s.customerName)}</b></div>
+    <div style="text-align:right"><span style="color:#8a7d70">WhatsApp</span><br><b>${esc(fmtPhone(s.customerPhone))}</b></div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:#f4ead6;color:#5d4a2a">
+      <th style="text-align:left;padding:8px 8px">Item</th><th style="padding:8px 4px;text-align:center">Qty</th>
+      <th style="padding:8px 4px;text-align:right">Rate</th><th style="padding:8px 8px;text-align:right">Amount</th></tr></thead>
+    <tbody>${items.map(i => `<tr>
+      <td style="padding:9px 8px;border-bottom:1px solid #eee6d8"><b>${esc(i.name)}</b>${(() => { const sub = [i.size || (i.type === 'Bakhoor' ? 'Bakhoor' : ''), i.discount ? 'disc ' + money(i.discount) : ''].filter(Boolean).join(' · '); return sub ? `<div style="color:#8a7d70;font-size:11.5px">${esc(sub)}</div>` : ''; })()}</td>
+      <td style="padding:9px 4px;text-align:center;border-bottom:1px solid #eee6d8">${i.qty}</td>
+      <td style="padding:9px 4px;text-align:right;border-bottom:1px solid #eee6d8">${money(i.rate)}</td>
+      <td style="padding:9px 8px;text-align:right;border-bottom:1px solid #eee6d8;font-weight:700">${money(i.amount)}</td></tr>`).join('')}</tbody>
+  </table>
+  <div style="margin-left:auto;width:62%;margin-top:12px;font-size:13px;line-height:1.9">
+    <div style="display:flex;justify-content:space-between"><span>Sub total</span><b>${money(s.subTotal)}</b></div>
+    ${disc ? `<div style="display:flex;justify-content:space-between"><span>Discount</span><b>−${moneyP(disc)}</b></div>` : ''}
+    ${P(s.gstAmount) ? `<div style="display:flex;justify-content:space-between"><span>GST ${s.gstPercent}%</span><b>${money(s.gstAmount)}</b></div>` : ''}
+    <div style="display:flex;justify-content:space-between;border-top:2px solid #211a15;margin-top:4px;padding-top:6px;font-size:17px"><span><b>Total</b></span><b>${money(s.grandTotal)}</b></div>
+    <div style="display:flex;justify-content:space-between;color:#2e7d62"><span>Paid</span><b>${moneyP(paidP)}</b></div>
+    ${dueP ? `<div style="display:flex;justify-content:space-between;color:#9e2f4a"><span>Due</span><b>${moneyP(dueP)}</b></div>` : ''}
+    <div style="display:flex;justify-content:space-between;color:#5d5249"><span>Payment mode</span><b>${esc(modeTxt)}</b></div>
+  </div>
+  <div style="margin-top:18px;padding-top:12px;border-top:1px dashed #cdbf9f;display:flex;justify-content:space-between;align-items:flex-end;font-size:12px;color:#5d5249">
+    <div>Billed by: <b style="color:#211a15">${esc(userName(s.userCode))}</b></div>
+    <div style="font:italic 600 16px Cormorant,Georgia,serif;color:#94733a">${esc(setting('thankYou', 'Thank you for shopping with us!'))}</div>
+  </div>
+</div>`;
+}
+function buildCaption(s) {
+  const items = saleItems(s);
+  const paidP = salePaidP(s), dueP = Math.max(0, P(s.grandTotal) - paidP);
+  const disc = P(s.lineDiscount) + P(s.billDiscount);
+  const head = [`*${setting('shopName', 'Khalifa Attar & Perfumes')}*`, `Bill: ${s.billNo} | ${fmtDate(s.billDate)}`, `Customer: ${s.customerName}`, ''];
+  const tail = [];
+  if (disc) tail.push(`Discount: −${moneyP(disc)}`);
+  if (P(s.gstAmount)) tail.push(`GST ${s.gstPercent}%: ${money(s.gstAmount)}`);
+  tail.push(`*Total: ${money(s.grandTotal)}*`);
+  tail.push(paidP ? `Paid: ${moneyP(paidP)} (${s.paymentMode === 'Credit' ? 'later' : s.paymentMode})` : 'Paid: ₹0 (Credit)');
+  if (dueP) tail.push(`Due: ${moneyP(dueP)}`);
+  tail.push(`Billed by: ${userName(s.userCode)}`, '', setting('thankYou', 'Thank you for shopping with us!') + ' 🌹', setting('website', 'khalifaattarperfumes.com'));
+  const itemLine = i => `${i.name}${i.size ? ' ' + i.size : ''}${i.type === 'Bakhoor' && !/bakh/i.test(i.name) ? ' (Bakhoor)' : ''} × ${i.qty} = ${money(i.amount)}`;
+  const build = n => head.concat(items.slice(0, n).map(itemLine),
+    n < items.length ? [`+${items.length - n} more item(s) — see the PDF`] : [], [''], tail).join('\n');
+  let n = items.length, text = build(n);
+  while (text.length > 980 && n > 1) { n--; text = build(n); }   // keep the caption under ~1000 characters
+  return text;
+}
+function pdfName(s) { return `${s.billNo}_${String(s.customerName).replace(/[^\w]+/g, '_').replace(/^_|_$/g, '') || 'Customer'}.pdf`; }
+async function makePdf(s) {
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1';
+  host.innerHTML = invoiceHTML(s);
+  document.body.appendChild(host);
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    await Promise.all($$('img', host).map(img => img.complete ? 0 : new Promise(r => { img.onload = img.onerror = r; })));
+    const el = host.firstElementChild;
+    let scale = 2, q = 0.82, blob;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const canvas = await html2canvas(el, { scale, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      const w = 148, h = Math.max(148, w * canvas.height / canvas.width);
+      const doc = new jspdf.jsPDF({ unit: 'mm', format: [w, h], orientation: h >= w ? 'portrait' : 'landscape', compress: true });
+      doc.addImage(canvas.toDataURL('image/jpeg', q), 'JPEG', 0, 0, w, w * canvas.height / canvas.width);
+      doc.setProperties({ title: s.billNo, subject: 'Bill ' + s.billNo, author: setting('shopName', 'Khalifa Attar & Perfumes') });
+      blob = doc.output('blob');
+      if (blob.size < 480 * 1024) break;
+      scale -= 0.4; q -= 0.12;
+    }
+    return blob;
+  } finally { host.remove(); }
+}
+
+/* =====================================================================
+   Khalifa Business Manager — screens
+   ===================================================================== */
+const SVG = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const IC = {
+  home: SVG('<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'),
+  bills: SVG('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>'),
+  plus: SVG('<path d="M12 5v14M5 12h14"/>'),
+  users: SVG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/>'),
+  more: SVG('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'),
+  back: SVG('<path d="M15 5l-7 7 7 7"/>'),
+  search: SVG('<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>'),
+  close: SVG('<path d="M6 6l12 12M18 6 6 18"/>'),
+  chev: SVG('<path d="m6 15 6-6 6 6"/>'),
+  wa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.8-.9-2-1s-.5-.1-.7.2-.8 1-.9 1.2-.3.2-.6.1a8.2 8.2 0 0 1-4-3.5c-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.4 3.4 0 0 0-1 2.5 5.9 5.9 0 0 0 1.2 3.1 13.4 13.4 0 0 0 5.2 4.6c1.9.8 2.7.9 3.6.7a3.1 3.1 0 0 0 2-1.4 2.5 2.5 0 0 0 .2-1.4c-.1-.2-.3-.3-.6-.4M12 21.8a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4A9.9 9.9 0 1 1 12 21.8m8.4-18.3A11.8 11.8 0 0 0 1.8 17.8L.1 24l6.3-1.7A11.9 11.9 0 0 0 24 12a11.8 11.8 0 0 0-3.6-8.5"/></svg>',
+  download: SVG('<path d="M12 4v11m0 0 4.5-4.5M12 15l-4.5-4.5"/><path d="M4 19h16"/>'),
+  edit: SVG('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'),
+  ban: SVG('<circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"/>'),
+  chart: SVG('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+  wallet: SVG('<path d="M3 7a2 2 0 0 1 2-2h13v4"/><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="16.5" cy="13.5" r="1.3"/>'),
+  receipt: SVG('<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/>'),
+  box: SVG('<path d="M12 3 3.5 7.5v9L12 21l8.5-4.5v-9z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>'),
+  sync: SVG('<path d="M20 11a8 8 0 0 0-14.3-4.6L4 8"/><path d="M4 4v4h4M4 13a8 8 0 0 0 14.3 4.6L20 16"/><path d="M20 20v-4h-4"/>'),
+  gear: SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
+  log: SVG('<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>'),
+  lock: SVG('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+  phone: SVG('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>'),
+  cash: SVG('<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>')
+};
+const UCOL = ['#c9a25e', '#6f93b8', '#4f9c7f', '#b0708a', '#8f8a5c'];
+const ucolor = code => UCOL[Math.max(0, users().findIndex(u => u.code === code)) % UCOL.length];
+
+const V = { tab: 'home', stack: [], billsF: 'all', billsQ: '', custQ: '', rep: { kind: 'today', from: '', to: '', user: '' }, closeDay: '', setup: null, locked: false };
+let NB = null, WA = null, PADS = {};
+
+/* ---------------- helpers ---------------- */
+function toast(msg) {
+  $$('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
+}
+function syncChip() {
+  const st = S.sync.state, n = S.outbox.size;
+  const map = { ok: ['ok', 'Synced'], busy: ['busy', 'Syncing…'], offline: ['', 'Offline' + (n ? ' · ' + n : '')], err: ['err', 'Sync error'], pending: ['pending', 'Pending ' + n], idle: [n ? 'pending' : 'ok', n ? 'Pending ' + n : 'Synced'] };
+  const [cls, label] = map[st] || map.idle;
+  return `<button class="chip-sync ${cls}" data-act="syncTap" title="${esc(S.sync.msg)}"><i></i>${esc(label)}</button>`;
+}
+function onSyncChange() { $$('.chip-sync').forEach(c => { c.outerHTML = syncChip(); }); }
+function onDataChanged() {
+  if (!S.me || V.locked || V.setup) return;
+  renderBase();
+  const top = V.stack[V.stack.length - 1];
+  if (top && top.type === 'page' && !['newbill', 'saved'].includes(top.name) && !$('.sheet')) refreshPage(top);
+}
+function billTags(s) {
+  const t = [];
+  if (s.status === 'void') t.push('<span class="tag void">Void</span>');
+  else {
+    const dueP = P(s.grandTotal) - salePaidP(s);
+    if (dueP > 0) t.push(`<span class="tag rose">Due ${moneyP(dueP)}</span>`);
+    if (s.sharedAt) t.push('<span class="tag jade">✓ Sent</span>');
+  }
+  return t.join(' ');
+}
+function billRow(s) {
+  return `<button class="row" data-act="openBill" data-id="${esc(s.id)}">
+    <span class="ucode ${esc(s.userCode)}" title="${esc(userName(s.userCode))}">${esc(s.userCode)}</span>
+    <span class="grow"><span class="t" style="display:block">${esc(s.customerName)}</span>
+      <span class="s" style="display:block">${esc(s.billNo)} · ${fmtTime(s.billDate)} · ${esc(userName(s.userCode))}</span></span>
+    <span style="text-align:right"><span class="amt money" style="display:block;${s.status === 'void' ? 'text-decoration:line-through;color:#999' : ''}">${money(s.grandTotal)}</span>${billTags(s)}</span>
+  </button>`;
+}
+const header = (title, sub, back = true, extra = '') => `<header class="top"><div class="top-row">
+  ${back ? `<button class="back" data-act="back" aria-label="Back">${IC.back}</button>` : ''}
+  <div class="grow"><h1>${esc(title)}</h1>${sub ? `<div class="sub">${sub}</div>` : ''}</div>${extra}${syncChip()}</div></header>`;
+const allSales = () => [...S.t.Sales.values()].filter(s => !s.deleted).sort((a, b) => b.billDate.localeCompare(a.billDate));
+
+/* ---------------- navigation: pages and sheets live on the history stack (Android back works) ---------------- */
+function openPage(name, arg) {
+  const el = document.createElement('div'); el.className = 'page'; el.dataset.name = name;
+  $('#pages').appendChild(el);
+  const entry = { type: 'page', name, arg, el };
+  V.stack.push(entry); history.pushState({ d: V.stack.length }, '');
+  refreshPage(entry); el.scrollTop = 0;
+}
+function replacePage(name, arg) {
+  const top = V.stack[V.stack.length - 1];
+  if (!top || top.type !== 'page') return openPage(name, arg);
+  top.name = name; top.arg = arg; top.el.dataset.name = name; refreshPage(top); top.el.scrollTop = 0;
+}
+function refreshPage(entry) {
+  const st = entry.el.scrollTop;
+  const fn = PAGES[entry.name]; entry.el.innerHTML = fn ? fn(entry.arg) : '';
+  if (entry.name === 'newbill') nbAfterRender();
+  if (entry.name === 'bill') fitInvoice(entry.el);
+  entry.el.scrollTop = st;
+}
+function openSheet(html, mount) {
+  const top = V.stack[V.stack.length - 1];
+  const reuse = top && top.type === 'sheet';                     // one sheet at a time: replace, keep history in step
+  $('#sheets').innerHTML = '';
+  const scrim = document.createElement('div'); scrim.className = 'scrim'; scrim.dataset.act = 'back';
+  const sh = document.createElement('div'); sh.className = 'sheet'; sh.setAttribute('role', 'dialog');
+  sh.innerHTML = '<div class="grab"></div>' + html;
+  $('#sheets').append(scrim, sh);
+  if (reuse) { top.el = sh; top.onClose = null; }
+  else { V.stack.push({ type: 'sheet', el: sh }); history.pushState({ d: V.stack.length }, ''); }
+  if (mount) mount(sh);
+  const f = sh.querySelector('[autofocus]'); if (f) setTimeout(() => f.focus(), 60);
+  return sh;
+}
+function closeSheetDom() { $('#sheets').innerHTML = ''; V.stack = V.stack.filter(e => e.type !== 'sheet'); }
+function popTop() {
+  const top = V.stack.pop(); if (!top) return;
+  if (top.type === 'sheet') { $('#sheets').innerHTML = ''; if (top.onClose) top.onClose(); }
+  else { top.el.remove(); if (top.name === 'newbill' && NB && !NB.editingId) saveDraft(); }
+}
+// UI-initiated back closes the overlay right away; the matching popstate is then ignored.
+function goBack() { if (!V.stack.length) return; popTop(); V.ignorePop = (V.ignorePop || 0) + 1; history.back(); }
+window.addEventListener('popstate', () => { if (V.ignorePop > 0) { V.ignorePop--; return; } popTop(); });
+function closeTopSheet() { const top = V.stack[V.stack.length - 1]; if (top && top.type === 'sheet') goBack(); }
+
+/* ---------------- base (tabs) ---------------- */
+function render() {
+  const app = $('#app');
+  if (V.setup || !S.me || !S.url) { if (!V.setup) V.setup = { step: 'connect' }; app.innerHTML = setupView(); $('#tabs').innerHTML = ''; return; }
+  if (V.locked) { app.innerHTML = lockView(); $('#tabs').innerHTML = ''; return; }
+  renderBase();
+}
+function renderBase() {
+  const app = $('#app');
+  const fn = { home: homeView, bills: billsView, customers: customersView, more: moreView }[V.tab];
+  app.innerHTML = fn();
+  $('#tabs').innerHTML = tabsHTML();
+}
+function tabsHTML() {
+  const b = (t, label, icon) => `<button class="${V.tab === t ? 'on' : ''}" data-act="tab" data-tab="${t}" aria-label="${label}">${icon}<span>${label}</span></button>`;
+  return `<nav class="tabs">${b('home', 'Home', IC.home)}${b('bills', 'Bills', IC.bills)}
+    <button class="plus" data-act="newBill" aria-label="New bill"><span class="disc">${IC.plus}</span><span style="color:var(--brass-lt)">New bill</span></button>
+    ${b('customers', 'Customers', IC.users)}${b('more', 'More', IC.more)}</nav>`;
+}
+
+function homeView() {
+  const tk = todayKey(), sales = salesList();
+  const today = sales.filter(s => dayKey(s.billDate) === tk);
+  const totP = today.reduce((a, s) => a + P(s.grandTotal), 0);
+  const per = users().map(u => ({ u, p: today.filter(s => s.userCode === u.code).reduce((a, s) => a + P(s.grandTotal), 0), n: today.filter(s => s.userCode === u.code).length }));
+  const m0 = new Date(); const mk = m0.getFullYear() + '-' + String(m0.getMonth() + 1).padStart(2, '0');
+  const monthP = sales.filter(s => dayKey(s.billDate).startsWith(mk)).reduce((a, s) => a + P(s.grandTotal), 0);
+  const dues = duesList(), duesP = dues.reduce((a, d) => a + d.dueP, 0);
+  const recent = allSales().slice(0, 8);
+  const hr = new Date().getHours(); const greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  return `<header class="top tall">
+    <div class="top-row"><div class="avatar">${esc(S.me.code)}</div><div class="grow"><div class="sub">${greet}</div><h1>${esc(S.me.name)}</h1></div>${syncChip()}</div>
+    <div class="today"><div class="lbl">Today’s sales</div><div class="num money">${moneyP(totP)}</div>
+      <div class="meta">${today.length} bill${today.length === 1 ? '' : 's'}${today.length ? ' · average ' + moneyP(Math.round(totP / today.length / 100) * 100) : ' yet today'}</div></div>
+    <div class="share"><div class="bar">${totP ? per.filter(x => x.p > 0).map(x => `<i style="width:${(x.p / totP * 100).toFixed(2)}%;background:${ucolor(x.u.code)}"></i>`).join('') : ''}</div>
+      <div class="legend">${per.map(x => `<span><i class="dot" style="background:${ucolor(x.u.code)}"></i>${esc(x.u.name)} <b class="money">${moneyP(x.p)}</b></span>`).join('')}</div></div>
+  </header>
+  <main>
+    <div class="kpis">
+      <button class="kpi" data-act="page" data-p="reports"><div class="k">This month</div><div class="v money">${moneyP(monthP)}</div></button>
+      <button class="kpi" data-act="page" data-p="dues"><div class="k">Pending dues · ${dues.length}</div><div class="v money ${duesP ? 'rose' : ''}">${moneyP(duesP)}</div></button>
+    </div>
+    <div class="h2">Recent bills <button class="link" data-act="tab" data-tab="bills">All bills</button></div>
+    ${recent.length ? `<div class="list">${recent.map(billRow).join('')}</div>` : `<div class="list"><div class="empty"><b>No bills yet</b>Tap New bill to make the first one.</div></div>`}
+  </main>`;
+}
+
+function billsView() {
+  const q = V.billsQ.trim().toLowerCase(), f = V.billsF, tk = todayKey();
+  let list = allSales();
+  if (f === 'mine') list = list.filter(s => s.userCode === S.me.code);
+  if (f === 'today') list = list.filter(s => dayKey(s.billDate) === tk);
+  if (f === 'due') list = list.filter(s => liveSale(s) && P(s.grandTotal) - salePaidP(s) > 0);
+  if (f === 'unsent') list = list.filter(s => liveSale(s) && !s.sharedAt);
+  if (f === 'void') list = list.filter(s => s.status === 'void');
+  if (q) { const qd = q.replace(/\D/g, ''); list = list.filter(s => s.customerName.toLowerCase().includes(q) || s.billNo.toLowerCase().includes(q) || (qd.length >= 3 && s.customerPhone.includes(qd))); }
+  const groups = new Map(); list.slice(0, 300).forEach(s => { const k = dayKey(s.billDate); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(s); });
+  const F = [['all', 'All'], ['mine', 'Mine'], ['today', 'Today'], ['due', 'With due'], ['unsent', 'Not sent'], ['void', 'Void']];
+  return header('Bills', `${list.length} bill${list.length === 1 ? '' : 's'}`, false) + `<main>
+    <div class="search">${IC.search}<input class="in" type="search" placeholder="Search name, number or bill no" value="${esc(V.billsQ)}" data-in="billsQ" aria-label="Search bills"></div>
+    <div class="seg" style="margin-top:12px">${F.map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="billsF" data-f="${k}">${l}</button>`).join('')}</div>
+    <div id="billsList">${groups.size ? [...groups].map(([d, arr]) => `<div class="h2">${d === tk ? 'Today' : fmtDate(d + 'T12:00:00')} <span style="margin-left:auto" class="money">${moneyP(arr.filter(liveSale).reduce((a, s) => a + P(s.grandTotal), 0))}</span></div><div class="list">${arr.map(billRow).join('')}</div>`).join('')
+      : `<div class="list" style="margin-top:14px"><div class="empty"><b>No bills here</b>${q ? 'Try another name or number.' : 'Bills you make show up here.'}</div></div>`}</div>
+  </main>`;
+}
+
+function customersView() {
+  const q = V.custQ.trim().toLowerCase(), qd = q.replace(/\D/g, '');
+  const sales = salesList();
+  const spent = new Map(); sales.forEach(s => spent.set(s.customerId, (spent.get(s.customerId) || 0) + P(s.grandTotal)));
+  let list = [...S.t.Customers.values()].filter(c => !c.deleted);
+  if (q) list = list.filter(c => c.name.toLowerCase().includes(q) || (qd.length >= 3 && c.phone.includes(qd)));
+  list = list.map(c => ({ c, spent: spent.get(c.id) || 0, due: customerDueP(c.id) })).sort((a, b) => b.due - a.due || b.spent - a.spent);
+  return header('Customers', `${list.length} customer${list.length === 1 ? '' : 's'}`, false) + `<main>
+    <div class="search">${IC.search}<input class="in" type="search" placeholder="Search name or WhatsApp number" value="${esc(V.custQ)}" data-in="custQ" aria-label="Search customers"></div>
+    <div class="list" style="margin-top:14px">${list.slice(0, 300).map(x => `<button class="row" data-act="openCust" data-id="${esc(x.c.id)}">
+      <span class="avatar" style="background:var(--brass-wash);color:var(--brass-dk);border:0">${esc((x.c.name || '?').trim().charAt(0).toUpperCase())}</span>
+      <span class="grow"><span class="t" style="display:block">${esc(x.c.name)}</span><span class="s" style="display:block">${esc(fmtPhone(x.c.phone))}</span></span>
+      <span style="text-align:right">${x.due > 0 ? `<span class="tag rose">Due ${moneyP(x.due)}</span>` : `<span class="amt money">${moneyP(x.spent)}</span>`}</span></button>`).join('')
+      || `<div class="empty"><b>No customers yet</b>Customers are saved automatically when you make a bill.</div>`}</div>
+  </main>`;
+}
+
+function moreView() {
+  const t = (p, icon, title, sub) => `<button class="tile" data-act="page" data-p="${p}">${icon}<div><b>${title}</b><br><span>${sub}</span></div></button>`;
+  const book = cashBook();
+  return header('More', 'Signed in as ' + esc(S.me.name), false) + `<main>
+    <div class="tiles">
+      ${t('reports', IC.chart, 'Reports', 'Sales, profit, user-wise')}
+      ${t('cash', IC.wallet, 'Cash & bank', 'Cash in hand ' + moneyP(book.totalCash))}
+      ${t('expenses', IC.receipt, 'Expenses', 'Add and review')}
+      ${t('dues', IC.users, 'Pending dues', duesList().length + ' customers')}
+      ${S.masters.Products.length ? t('products', IC.box, 'Price list', S.masters.Products.length + ' from the Sheet') : ''}
+      ${t('audit', IC.log, 'Activity log', 'Edits, voids, conflicts')}
+      ${t('settings', IC.gear, 'Settings', 'PIN, Sheet, backup')}
+      <button class="tile" data-act="lockNow">${IC.lock}<div><b>Lock app</b><br><span>PIN needed to open</span></div></button>
+    </div>
+    <p class="hint" style="text-align:center;margin-top:22px">Khalifa Business Manager v${APP_VERSION}</p>
+  </main>`;
+}
+
+/* ---------------- pages ---------------- */
+const PAGES = {};
+
+/* ===== New bill — the live receipt ===== */
+function newNB() { return { lines: [], phone: '', name: '', nameAuto: true, billDiscount: '', gstPercent: 0, mode: 'Cash', paid: '', paidTouched: false, it: newIt(), editingId: null }; }
+function saveDraft() { try { if (NB && !NB.editingId && (NB.lines.length || NB.phone)) localStorage.setItem('kbm-draft', JSON.stringify(NB)); else localStorage.removeItem('kbm-draft'); } catch (e) { /* storage blocked */ } }
+function loadDraft() { try { const d = JSON.parse(localStorage.getItem('kbm-draft') || 'null'); return d && d.lines ? d : null; } catch (e) { return null; } }
+function clearDraft() { try { localStorage.removeItem('kbm-draft'); } catch (e) { /* ignore */ } }
+function openNewBill() { NB = loadDraft() || newNB(); if (!NB.it || !CATS[NB.it.cat]) NB.it = newIt(); NB.editingId = null; openPage('newbill'); }
+function openEditBill(id) {
+  const s = S.t.Sales.get(id); if (!s) return;
+  NB = newNB(); NB.editingId = id;
+  NB.lines = saleItems(s).map(i => ({ name: i.name, size: i.size, type: CATS[i.type] ? i.type : 'Other', qty: i.qty, rate: i.rate, discount: i.discount || '', costPrice: i.costPrice }));
+  NB.phone = s.customerPhone.slice(2); NB.name = s.customerName; NB.nameAuto = false;
+  NB.billDiscount = s.billDiscount || ''; NB.gstPercent = s.gstPercent || 0;
+  const paid = [...S.t.Payments.values()].find(p => p.saleId === id && p.kind === 'bill' && livePay(p));
+  NB.mode = paid ? paid.mode : 'Credit'; NB.paid = paid ? paid.amount : 0; NB.paidTouched = true;
+  openPage('newbill');
+}
+// No product list: every item is typed on the bill. Category decides the sizes.
+const CATS = {
+  Attar: { label: 'Attar', sizes: ['3ml', '6ml', '8ml', '10ml', '12ml', '15ml', '20ml', '22ml'], ph: 'e.g. Prince, Tazkirah, Musk' },
+  Perfume: { label: 'Perfume', sizes: ['50ml', '100ml'], ph: 'e.g. Prince, Arabian Oud' },
+  Bakhoor: { label: 'Bakhoor', sizes: [], ph: 'e.g. Bakhoor Malaki, Oud Chips' },
+  Other: { label: 'Manual', sizes: [], ph: 'e.g. Gift box, Roll-on bottle' }
+};
+const newIt = cat => ({ cat: cat || 'Attar', name: '', size: '', price: '', qty: 1 });
+// Items sold before (all phones) — suggested so the next bill is one tap.
+function pastItems(cat) {
+  const map = new Map();
+  salesList().slice().sort((a, b) => a.billDate.localeCompare(b.billDate)).forEach(s => saleItems(s).forEach(i => {
+    const t = i.type && CATS[i.type] ? i.type : 'Other';
+    if (t !== cat) return;
+    const k = i.name.trim().toLowerCase() + '|' + String(i.size || '').toLowerCase();
+    const cur = map.get(k) || { name: i.name, size: i.size || '', price: i.rate, count: 0 };
+    cur.price = i.rate; cur.count += i.qty; map.set(k, cur);
+  }));
+  return [...map.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+function sugHTML() {
+  const it = NB.it, q = it.name.trim().toLowerCase();
+  let list = pastItems(it.cat);
+  if (q) list = list.filter(x => x.name.toLowerCase().includes(q) && !(x.name.toLowerCase() === q && x.size === it.size));
+  NB.sugs = list.slice(0, 6);
+  if (!NB.sugs.length) return '';
+  return `<div class="hint" style="margin:8px 2px 6px">${q ? 'Sold before' : 'Quick pick — sold before'}</div><div class="sugs">${NB.sugs.map((x, i) =>
+    `<button class="size" data-act="itPick" data-i="${i}">${esc(x.name)}${x.size ? ' · ' + esc(x.size) : ''} · ${money(x.price)}</button>`).join('')}</div>`;
+}
+function composerHTML() {
+  const it = NB.it, c = CATS[it.cat];
+  const other = it.cat === 'Attar' && it.size && !c.sizes.includes(it.size) ? it.size.replace(/ml$/i, '') : '';
+  return `<div class="seg cats">${Object.keys(CATS).map(k => `<button class="${it.cat === k ? 'on' : ''}" data-act="itCat" data-c="${k}">${CATS[k].label}</button>`).join('')}</div>
+    <label class="f" for="itName" style="margin-top:14px">${it.cat === 'Other' ? 'Item name' : CATS[it.cat].label + ' name'}</label>
+    <input class="in" id="itName" data-in="itName" value="${esc(it.name)}" placeholder="${esc(c.ph)}" autocomplete="off" autocapitalize="words">
+    <div id="itSug">${sugHTML()}</div>
+    ${c.sizes.length ? `<label class="f" style="margin-top:12px">Size</label><div class="seg sizes-seg">${c.sizes.map(z => `<button class="${it.size === z ? 'on' : ''}" data-act="itSize" data-z="${z}">${z}</button>`).join('')}</div>` : ''}
+    ${it.cat === 'Attar' ? `<div class="prefix" style="margin-top:8px"><input class="in" id="itOther" data-in="itOther" inputmode="numeric" placeholder="Other size (3–22)" value="${esc(other)}" style="padding-left:14px;padding-right:46px"><span style="left:auto;right:14px">ml</span></div>` : ''}
+    ${it.cat === 'Other' ? `<input class="in" id="itFree" data-in="itFree" style="margin-top:10px" placeholder="Size / unit (optional)" value="${esc(it.size)}" autocomplete="off">` : ''}
+    <div class="grid2" style="margin-top:12px">
+      <div class="mini"><label for="itPrice">${it.cat === 'Bakhoor' ? 'Price ₹ (per piece)' : 'Price ₹'}</label><input id="itPrice" data-in="itPrice" inputmode="decimal" placeholder="0" value="${esc(it.price)}"></div>
+      <div class="mini"><label>Quantity</label><div class="qty"><button data-act="itQty" data-d="-1" aria-label="Less">−</button><span id="itQty">${it.qty}</span><button data-act="itQty" data-d="1" aria-label="More">+</button></div></div>
+    </div>
+    <button class="btn brass" style="margin-top:12px" data-act="itAdd">${IC.plus} Add to bill</button>
+    <div class="err" id="itErr"></div>`;
+}
+function renderComposer(focusName) {
+  const box = $('#nbComposer'); if (!box) return;
+  box.innerHTML = composerHTML();
+  if (focusName) { const n = $('#itName'); n.focus(); }
+}
+function itAdd() {
+  const it = NB.it, err = m => { const e = $('#itErr'); if (e) e.textContent = m; toast(m); };
+  const name = it.name.trim().replace(/\s+/g, ' '), price = Number(String(it.price).replace(/[^\d.]/g, ''));
+  if (!name) return err('Enter the item name');
+  if ((it.cat === 'Attar' || it.cat === 'Perfume') && !it.size) return err('Choose a size');
+  if (it.cat === 'Attar') { const ml = parseFloat(it.size); if (!(ml >= 3 && ml <= 22)) return err('Attar size must be between 3ml and 22ml'); }
+  if (!(price > 0)) return err('Enter the price');
+  const size = it.cat === 'Bakhoor' ? '' : it.size.trim();
+  const ex = NB.lines.find(l => l.name.toLowerCase() === name.toLowerCase() && String(l.size).toLowerCase() === size.toLowerCase() && l.type === it.cat && Number(l.rate) === price);
+  if (ex) ex.qty += it.qty; else NB.lines.push({ name, size, type: it.cat, qty: it.qty, rate: price, discount: '', costPrice: null });
+  NB.it = newIt(it.cat);
+  renderComposer(false); $('#nbLines').innerHTML = nbLinesHTML(); nbUpdate();
+  toast(`${name}${size ? ' ' + size : ''} × ${ex ? ex.qty : NB.lines[NB.lines.length - 1].qty} added`);
+}
+function nbLinesHTML() {
+  if (!NB.lines.length) return `<div class="line" style="text-align:center;color:var(--muted);border-style:dashed">No items yet — type an item above and tap “Add to bill”</div>`;
+  return NB.lines.map((l, i) => `<div class="line">
+    <div class="top-l"><div class="grow"><div class="nm">${esc(l.name)}</div><div class="sz">${esc([l.size, l.type === 'Other' ? '' : l.type].filter(Boolean).join(' · '))}${l.type === 'Bakhoor' ? ' · ' + l.qty + ' pc' : ''}</div></div>
+      <b class="amt money" id="nbAmt${i}"></b>
+      <button class="icon-btn" data-act="nbDel" data-i="${i}" aria-label="Remove ${esc(l.name)}" style="width:34px;height:34px">${IC.close}</button></div>
+    <div class="ctrl">
+      <div class="mini"><label>Qty</label><div class="qty"><button data-act="nbQty" data-i="${i}" data-d="-1" aria-label="Less">−</button><span id="nbQ${i}">${l.qty}</span><button data-act="nbQty" data-i="${i}" data-d="1" aria-label="More">+</button></div></div>
+      <div class="mini"><label>Rate ₹</label><input inputmode="decimal" value="${esc(l.rate)}" data-in="nbRate" data-i="${i}"></div>
+      <div class="mini"><label>Discount ₹</label><input inputmode="decimal" value="${esc(l.discount)}" placeholder="0" data-in="nbDisc" data-i="${i}"></div>
+    </div></div>`).join('');
+}
+PAGES.newbill = () => {
+  const preview = NB.editingId ? (S.t.Sales.get(NB.editingId) || {}).billNo : nextBillNo().billNo;
+  const gst = gstOn();
+  return header(NB.editingId ? 'Edit bill' : 'New bill', `${esc(preview)} · ${esc(S.me.name)}`) + `<main class="noTab">
+    <label class="f" for="nbPhone">Customer WhatsApp number</label>
+    <div class="prefix"><span>+91</span><input class="in big" id="nbPhone" type="tel" inputmode="numeric" maxlength="14" placeholder="10-digit number" autocomplete="off" value="${esc(NB.phone)}" data-in="nbPhone"></div>
+    <input class="in" style="margin-top:10px" id="nbName" placeholder="Customer name" autocomplete="off" value="${esc(NB.name)}" data-in="nbName" aria-label="Customer name">
+    <div id="nbFound" class="custbox"></div>
+
+    <div class="h2">Items</div>
+    <div class="card composer" id="nbComposer">${composerHTML()}</div>
+    <div style="margin-top:14px" id="nbLines">${nbLinesHTML()}</div>
+
+    <div class="h2">Discount${gst ? ' & GST' : ''}</div>
+    <div class="grid2"><div class="mini"><label>Discount on bill ₹</label><input inputmode="decimal" placeholder="0" value="${esc(NB.billDiscount)}" data-in="nbBillDisc"></div>
+      ${gst ? `<div class="mini"><label>GST %</label><div class="seg">${[0, 5, 12, 18].map(g => `<button class="${Number(NB.gstPercent) === g ? 'on' : ''}" data-act="nbGst" data-g="${g}" style="height:44px;padding:0 12px">${g}</button>`).join('')}</div></div>` : '<div></div>'}</div>
+
+    <div class="h2">Payment</div>
+    <div class="seg" id="nbModes">${MODES.map(m => `<button class="${NB.mode === m ? 'on' : ''}" data-act="nbMode" data-m="${m}">${m}</button>`).join('')}</div>
+    <div class="mini" style="margin-top:12px"><label>Paid now ₹</label><input id="nbPaid" inputmode="decimal" value="${esc(NB.paid)}" data-in="nbPaid" ${NB.mode === 'Credit' ? 'disabled' : ''}></div>
+    <div class="hint" id="nbPaidHint"></div>
+    <div class="err" id="nbErr"></div>
+  </main>
+  <div class="slip" id="slip">
+    <div class="handle"><button class="grow" style="text-align:left" data-act="slipToggle" aria-label="Show bill breakdown">
+      <div class="count"><span id="slipCount"></span> <span class="chev" style="display:inline-block;width:14px;vertical-align:middle">${IC.chev}</span></div>
+      <div class="total money" id="slipTotal"></div></button>
+      <button class="btn brass" data-act="nbSave">${NB.editingId ? 'Save changes' : 'Save bill'}</button></div>
+    <div class="detail" id="slipDetail"></div>
+  </div>`;
+};
+function nbCalc() { return calcBill(NB.lines, NB.billDiscount, gstOn() ? NB.gstPercent : 0); }
+function nbAfterRender() { nbLookup(false); nbUpdate(); }
+function nbUpdate() {
+  const c = nbCalc();
+  c.items.forEach((l, i) => { const a = $('#nbAmt' + i); if (a) a.textContent = moneyP(l.amountP); const q = $('#nbQ' + i); if (q) q.textContent = l.qty; });
+  if (!NB.paidTouched && NB.mode !== 'Credit') { NB.paid = R(c.grand); const pi = $('#nbPaid'); if (pi && document.activeElement !== pi) pi.value = NB.paid || ''; }
+  const paidP = NB.mode === 'Credit' ? 0 : Math.min(Math.max(P(NB.paid), 0), c.grand), dueP = c.grand - paidP;
+  const qty = c.items.reduce((a, l) => a + l.qty, 0);
+  const sc = $('#slipCount'); if (sc) sc.textContent = `${qty} item${qty === 1 ? '' : 's'}`;
+  const st = $('#slipTotal'); if (st) st.textContent = moneyP(c.grand);
+  const sd = $('#slipDetail');
+  if (sd) sd.innerHTML = `<div><span>Sub total</span><b class="money">${moneyP(c.sub)}</b></div>
+    ${c.lineDisc + c.billDisc ? `<div><span>Discount</span><b class="money">−${moneyP(c.lineDisc + c.billDisc)}</b></div>` : ''}
+    ${c.gst ? `<div><span>GST ${NB.gstPercent}%</span><b class="money">${moneyP(c.gst)}</b></div>` : ''}
+    <div><span>Paid now (${esc(NB.mode)})</span><b class="money">${moneyP(paidP)}</b></div>
+    ${dueP > 0 ? `<div class="due"><span>Due — goes to customer’s ledger</span><b class="money">${moneyP(dueP)}</b></div>` : ''}`;
+  const h = $('#nbPaidHint');
+  if (h) h.innerHTML = P(NB.paid) > c.grand && NB.mode !== 'Credit' ? `<span class="err">Paid is more than the total — only ${moneyP(c.grand)} will be recorded.</span>`
+    : dueP > 0 ? `<b style="color:var(--rose)">${moneyP(dueP)}</b> will be added to ${esc(NB.name || 'the customer')}’s due.` : '';
+  saveDraft();
+}
+function nbLookup(fillName = true) {
+  const box = $('#nbFound'); if (!box) return;
+  const ph = normPhone(NB.phone);
+  if (!ph) { box.innerHTML = String(NB.phone).replace(/\D/g, '').length >= 10 ? '<div class="err">This doesn’t look like a 10-digit mobile number.</div>' : ''; return; }
+  const c = S.t.Customers.get('C' + ph);
+  if (c && !c.deleted) {
+    if (fillName && (NB.nameAuto || !NB.name)) { NB.name = c.name; NB.nameAuto = true; const n = $('#nbName'); if (n) n.value = c.name; }
+    const st = customerStats(c.id);
+    box.innerHTML = `<div class="found">Returning customer · ${st.bills.length} bill${st.bills.length === 1 ? '' : 's'} · spent <b class="money">${moneyP(st.spentP)}</b>${st.dueP > 0 ? ` · <b style="color:var(--rose)">due ${moneyP(st.dueP)}</b>` : ''}</div>`;
+  } else box.innerHTML = `<div class="found" style="background:var(--jade-wash)">New customer — saved with this bill.</div>`;
+}
+async function nbSave() {
+  const errs = validateBill(NB);
+  const er = $('#nbErr'); if (er) er.textContent = errs[0] || '';
+  if (errs.length) { toast(errs[0]); return; }
+  const doSave = async reason => {
+    try {
+      const sale = await saveBill(NB, NB.editingId, reason);
+      clearDraft(); NB = null;
+      const seal = document.createElement('div'); seal.className = 'seal'; seal.innerHTML = '<div class="wax">K</div>';
+      document.body.appendChild(seal);
+      await new Promise(r => setTimeout(r, matchMedia('(prefers-reduced-motion: reduce)').matches ? 150 : 700));
+      seal.remove(); renderBase(); replacePage('saved', sale.id);
+    } catch (e) { toast(e.message); if (er) er.textContent = e.message; }
+  };
+  if (NB.editingId) askReasonPin('Save changes to this bill', 'What changed and why?', reason => { closeTopSheet(); doSave(reason); });
+  else doSave('');
+}
+PAGES.saved = id => {
+  const s = S.t.Sales.get(id); if (!s) return '';
+  const dueP = P(s.grandTotal) - salePaidP(s);
+  return `<header class="top"><div class="top-row"><button class="back" data-act="back" aria-label="Close">${IC.close}</button><div class="grow"></div>${syncChip()}</div></header>
+  <main class="saved">
+    <div class="ok">K</div>
+    <h2 style="margin:6px 0 2px">Bill saved</h2>
+    <div class="bn">${esc(s.billNo)}</div>
+    <div class="tot money">${money(s.grandTotal)}</div>
+    <div class="hint" style="font-size:14px">${esc(s.customerName)} · ${esc(fmtPhone(s.customerPhone))}${dueP > 0 ? ` · <b style="color:var(--rose)">due ${moneyP(dueP)}</b>` : ''}</div>
+    <div class="stack" style="margin-top:26px;text-align:left">
+      <button class="btn wa big-share" data-act="wa" data-id="${esc(s.id)}">${IC.wa} Send on WhatsApp</button>
+      <div class="grid2"><button class="btn ghost" data-act="openBill" data-id="${esc(s.id)}">View bill</button><button class="btn ghost" data-act="newBillFromSaved">${IC.plus} New bill</button></div>
+    </div>
+  </main>`;
+};
+
+/* ===== Bill detail ===== */
+PAGES.bill = id => {
+  const s = S.t.Sales.get(id); if (!s) return header('Bill', 'Not found');
+  const live = s.status !== 'void';
+  return header(s.billNo, `${fmtDate(s.billDate)} · ${fmtTime(s.billDate)} · ${esc(userName(s.userCode))}`) + `<main>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${billTags(s) || '<span class="tag jade">Paid</span>'}
+      ${s.sharedAt ? `<span class="tag">Sent by ${esc(s.sharedBy)} · ${fmtDate(s.sharedAt)} ${fmtTime(s.sharedAt)}</span>` : '<span class="tag brass">Not sent yet</span>'}</div>
+    <div class="inv-wrap"><div class="inv-scale">${invoiceHTML(s)}</div></div>
+    <div class="stack" style="margin-top:14px">
+      ${live ? `<button class="btn wa big-share" data-act="wa" data-id="${esc(s.id)}">${IC.wa} ${s.sharedAt ? 'Send again on WhatsApp' : 'Send on WhatsApp'}</button>` : ''}
+      <div class="grid2"><button class="btn ghost" data-act="pdf" data-id="${esc(s.id)}">${IC.download} PDF</button>
+        <button class="btn ghost" data-act="openCust" data-id="${esc(s.customerId)}">${IC.users} Customer</button></div>
+      ${live ? `<div class="grid2"><button class="btn ghost" data-act="editBill" data-id="${esc(s.id)}">${IC.edit} Edit</button>
+        <button class="btn danger" data-act="voidBill" data-id="${esc(s.id)}">${IC.ban} Void</button></div>` : ''}
+    </div>
+  </main>`;
+};
+function fitInvoice(root) {
+  const wrap = $('.inv-wrap', root), sc = $('.inv-scale', root); if (!wrap || !sc) return;
+  requestAnimationFrame(() => {
+    const k = Math.min(1, (wrap.clientWidth - 28) / 560);
+    sc.style.transform = `scale(${k})`; sc.style.height = (sc.firstElementChild.offsetHeight * k) + 'px'; sc.style.width = 560 * k + 'px';
+  });
+}
+
+/* ===== Customer ===== */
+PAGES.customer = id => {
+  const c = S.t.Customers.get(id); if (!c) return header('Customer', 'Not found');
+  const st = customerStats(id);
+  const pays = payList().filter(p => p.customerId === id).sort((a, b) => b.date.localeCompare(a.date));
+  return header(c.name, esc(fmtPhone(c.phone))) + `<main>
+    <div class="grid2">
+      <a class="btn wa" href="https://wa.me/${esc(c.phone)}" target="_blank" rel="noopener">${IC.wa} Chat</a>
+      <button class="btn brass" data-act="receive" data-id="${esc(id)}" ${st.dueP > 0 ? '' : 'disabled'}>Receive payment</button>
+    </div>
+    <div class="kpis" style="margin-top:12px;grid-template-columns:1fr 1fr 1fr">
+      <div class="kpi"><div class="k">Spent</div><div class="v money" style="font-size:18px">${moneyP(st.spentP)}</div></div>
+      <div class="kpi"><div class="k">Bills</div><div class="v" style="font-size:18px">${st.bills.length}</div></div>
+      <div class="kpi"><div class="k">Due</div><div class="v money ${st.dueP > 0 ? 'rose' : ''}" style="font-size:18px">${moneyP(Math.max(0, st.dueP))}</div></div>
+    </div>
+    <div class="h2">Bills</div>
+    <div class="list">${st.bills.map(s => `<button class="row" data-act="openBill" data-id="${esc(s.id)}">
+      <span class="ucode ${esc(s.userCode)}">${esc(s.userCode)}</span>
+      <span class="grow"><span class="t" style="display:block">${esc(saleItems(s).map(i => i.name + (i.size ? ' ' + i.size : '') + ' ×' + i.qty).join(', '))}</span>
+        <span class="s" style="display:block">${esc(s.billNo)} · ${fmtDate(s.billDate)} · by ${esc(userName(s.userCode))}</span></span>
+      <span style="text-align:right"><span class="amt money" style="display:block">${money(s.grandTotal)}</span>${billTags(s)}</span></button>`).join('') || '<div class="empty">No bills</div>'}</div>
+    <div class="h2">Payments received</div>
+    <div class="list">${pays.map(p => `<div class="row"><span class="grow"><span class="t" style="display:block">${esc(p.mode)} · ${p.kind === 'due' ? 'Due payment' : 'At bill ' + esc((S.t.Sales.get(p.saleId) || {}).billNo || '')}</span>
+      <span class="s" style="display:block">${fmtDate(p.date)} ${fmtTime(p.date)} · received by ${esc(p.receivedBy)}</span></span><span class="amt money" style="color:var(--jade)">${money(p.amount)}</span></div>`).join('') || '<div class="empty">No payments yet</div>'}</div>
+  </main>`;
+};
+function receiveSheet(cid) {
+  const c = S.t.Customers.get(cid), due = customerDueP(cid);
+  let mode = 'Cash';
+  openSheet(`<h3>Receive payment</h3><p class="hint" style="margin-top:-8px">${esc(c.name)} · due <b style="color:var(--rose)">${moneyP(due)}</b></p>
+    <div class="stack"><div class="prefix"><span>₹</span><input class="in big" id="rpAmt" inputmode="decimal" value="${R(due)}" autofocus aria-label="Amount"></div>
+    <div class="seg" id="rpModes">${['Cash', 'UPI', 'Card', 'Bank Transfer'].map(m => `<button class="${m === mode ? 'on' : ''}" data-m="${m}">${m}</button>`).join('')}</div>
+    <input class="in" id="rpNote" placeholder="Note (optional)">
+    <button class="btn brass" id="rpSave">Save payment</button><div class="hint">Received by ${esc(S.me.name)}</div></div>`, sh => {
+    $('#rpModes', sh).onclick = e => { const b = e.target.closest('button'); if (!b) return; mode = b.dataset.m; $$('#rpModes button', sh).forEach(x => x.classList.toggle('on', x === b)); };
+    $('#rpSave', sh).onclick = async () => {
+      try { await receivePayment(cid, $('#rpAmt', sh).value, mode, $('#rpNote', sh).value); closeTopSheet(); toast('Payment saved'); onDataChanged(); }
+      catch (e) { toast(e.message); }
+    };
+  });
+}
+
+/* ===== Dues ===== */
+PAGES.dues = () => {
+  const d = duesList(), tot = d.reduce((a, x) => a + x.dueP, 0);
+  return header('Pending dues', `${d.length} customers · ${moneyP(tot)}`) + `<main><div class="list">${d.map(x => `<button class="row" data-act="openCust" data-id="${esc(x.c.id)}">
+    <span class="grow"><span class="t" style="display:block">${esc(x.c.name)}</span><span class="s" style="display:block">${esc(fmtPhone(x.c.phone))}</span></span>
+    <span class="tag rose">${moneyP(x.dueP)}</span></button>`).join('') || '<div class="empty"><b>No pending dues</b>Everyone has paid in full.</div>'}</div></main>`;
+};
+
+/* ===== Reports ===== */
+PAGES.reports = () => {
+  const r0 = V.rep, range = rangeFor(r0.kind, r0.from, r0.to), r = report(range, r0.user);
+  const K = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['custom', 'Custom']];
+  const modeMax = Math.max(1, ...Object.values(r.modes));
+  const bar = (label, v, max) => `<div class="b"><span>${esc(label)}</span><span class="track"><i style="width:${(v / max * 100).toFixed(1)}%"></i></span><b class="money">${moneyP(v)}</b></div>`;
+  return header('Reports', `${fmtDate(range.from)} – ${fmtDate(range.to)}`) + `<main>
+    <div class="seg">${K.map(([k, l]) => `<button class="${r0.kind === k ? 'on' : ''}" data-act="repKind" data-k="${k}">${l}</button>`).join('')}</div>
+    ${r0.kind === 'custom' ? `<div class="grid2" style="margin-top:10px"><input class="in" type="date" value="${esc(r0.from)}" data-in="repFrom" aria-label="From"><input class="in" type="date" value="${esc(r0.to)}" data-in="repTo" aria-label="To"></div>` : ''}
+    <div class="seg" style="margin-top:10px"><button class="${!r0.user ? 'on' : ''}" data-act="repUser" data-u="">All users</button>${users().map(u => `<button class="${r0.user === u.code ? 'on' : ''}" data-act="repUser" data-u="${u.code}">${esc(u.name)}</button>`).join('')}</div>
+    <div class="kpis" style="margin-top:14px">
+      <div class="kpi"><div class="k">Sales</div><div class="v money">${moneyP(r.total)}</div></div>
+      <div class="kpi"><div class="k">Bills · average</div><div class="v">${r.count} <span style="font-size:14px;color:var(--muted)" class="money">· ${moneyP(r.avg)}</span></div></div>
+      <div class="kpi" style="grid-column:1/-1"><div class="k">Profit</div>${r.count && r.costKnown ? `<div class="v money" style="color:${r.profit >= 0 ? 'var(--jade)' : 'var(--rose)'}">${moneyP(r.profit)}</div>` : `<div class="hint" style="margin:4px 0 0">Profit shows once items have a cost price in the Sheet’s Products tab.</div>`}</div>
+    </div>
+    <div class="h2">Money received by mode</div><div class="card bars">${Object.entries(r.modes).map(([m, v]) => bar(m, v, modeMax)).join('')}</div>
+    <div class="h2">User-wise</div><div class="card scrollx"><table class="t"><thead><tr><th>User</th><th>Sales</th><th>Bills</th><th>Cash</th><th>UPI/Bank</th><th>Dues</th><th>Sent</th></tr></thead>
+      <tbody>${r.perUser.map(u => `<tr><td><span class="dot" style="background:${ucolor(u.code)}"></span>${esc(u.name)}</td><td class="money">${moneyP(u.sales)}</td><td>${u.bills}</td><td class="money">${moneyP(u.cash)}</td><td class="money">${moneyP(u.bank)}</td><td class="money" style="color:var(--rose)">${moneyP(u.dues)}</td><td>${u.sent}/${u.bills}</td></tr>`).join('')}</tbody></table></div>
+    <div class="h2">Top products</div><div class="list">${r.topProducts.map(p => `<div class="row"><span class="grow t">${esc(p.name)}</span><span class="s">×${p.qty}</span><span class="amt money">${moneyP(p.amt)}</span></div>`).join('') || '<div class="empty">No sales in this period</div>'}</div>
+    <div class="h2">Top customers</div><div class="list">${r.topCustomers.map(c => `<div class="row"><span class="grow"><span class="t" style="display:block">${esc(c.name)}</span><span class="s">${c.bills} bill${c.bills === 1 ? '' : 's'}</span></span><span class="amt money">${moneyP(c.amt)}</span></div>`).join('') || '<div class="empty">No sales in this period</div>'}</div>
+    <div class="h2">Pending dues <button class="link" data-act="page" data-p="dues">All</button></div><div class="list">${r.dues.slice(0, 5).map(d => `<button class="row" data-act="openCust" data-id="${esc(d.c.id)}"><span class="grow t">${esc(d.c.name)}</span><span class="tag rose">${moneyP(d.dueP)}</span></button>`).join('') || '<div class="empty">No pending dues</div>'}</div>
+    <button class="btn ghost" style="margin-top:16px" data-act="csv">${IC.download} Export bills (CSV)</button>
+  </main>`;
+};
+
+/* ===== Cash & bank ===== */
+PAGES.cash = () => {
+  const b = cashBook(), day = V.closeDay || todayKey(), dc = dayClose(day);
+  const moves = [...[...S.t.Transfers.values()].map(t => ({ k: 'Transfers', r: t })), ...[...S.t.Expenses.values()].map(e => ({ k: 'Expenses', r: e }))]
+    .filter(x => !x.r.deleted).sort((a, b2) => b2.r.date.localeCompare(a.r.date)).slice(0, 25);
+  const T = { handover: 'Cash handover', deposit: 'Deposit to bank', withdraw: 'Withdraw from bank', opening_cash: 'Opening cash', opening_bank: 'Opening bank balance' };
+  const desc = x => x.k === 'Expenses' ? `${esc(x.r.category)} · ${esc(x.r.mode)} · paid by ${esc(x.r.paidBy)}`
+    : x.r.type === 'handover' ? `${esc(x.r.fromUser)} → ${esc(x.r.toUser)}` : x.r.type === 'deposit' ? `${esc(x.r.fromUser)} → bank` : x.r.type === 'withdraw' ? `bank → ${esc(x.r.toUser)}` : x.r.type === 'opening_cash' ? esc(x.r.toUser) : 'Bank';
+  return header('Cash & bank', 'Live from every phone') + `<main>
+    <div class="card" style="background:var(--oud);color:#f2e8d6">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div class="sub" style="color:#bfae93;font-size:13px">Cash in hand</div><div class="serif money" style="font-size:40px;color:var(--brass-lt);line-height:1.1">${moneyP(b.totalCash)}</div></div>
+        <div style="text-align:right"><div style="color:#bfae93;font-size:13px">Bank</div><div class="money" style="font-size:20px;font-weight:800">${moneyP(b.bank)}</div></div></div>
+      <div style="margin-top:12px;border-top:1px solid #3d3026;padding-top:8px">${Object.entries(b.cash).map(([n, v]) => `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>${esc(n)}</span><b class="money">${moneyP(v)}</b></div>`).join('')}</div>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <button class="btn ghost" data-act="exp">${IC.receipt} Expense</button><button class="btn ghost" data-act="tr" data-t="handover">Handover</button>
+      <button class="btn ghost" data-act="tr" data-t="deposit">Deposit</button><button class="btn ghost" data-act="tr" data-t="withdraw">Withdraw</button>
+    </div>
+    <button class="btn ghost" style="margin-top:10px" data-act="tr" data-t="opening">Opening balance</button>
+    <div class="h2">Day close <input type="date" class="in" style="width:auto;height:38px;margin-left:auto" value="${esc(day)}" data-in="closeDay" aria-label="Day"></div>
+    <div class="card scrollx"><table class="t"><thead><tr><th>User</th><th>Cash in</th><th>UPI/Bank</th><th>Expenses</th><th>Handover ±</th><th>Deposited</th><th>Closing cash</th></tr></thead>
+      <tbody>${dc.map(u => `<tr><td>${esc(u.name)}</td><td class="money">${moneyP(u.cashIn)}</td><td class="money">${moneyP(u.bankIn)}</td><td class="money">${moneyP(u.expenses)}</td><td class="money">${moneyP(u.handIn - u.handOut)}</td><td class="money">${moneyP(u.deposited)}</td><td class="money"><b>${moneyP(u.closing)}</b></td></tr>`).join('')}</tbody></table></div>
+    <div class="h2">Recent movements</div>
+    <div class="list">${moves.map(x => `<button class="row" data-act="move" data-k="${x.k}" data-id="${esc(x.r.id)}"><span class="grow"><span class="t" style="display:block">${x.k === 'Expenses' ? 'Expense' : T[x.r.type] || x.r.type} ${x.r.status === 'void' ? '<span class="tag void">Void</span>' : ''}</span>
+      <span class="s" style="display:block">${desc(x)} · ${fmtDate(x.r.date)}</span></span><span class="amt money" style="color:${x.k === 'Expenses' ? 'var(--rose)' : 'var(--ink)'}">${money(x.r.amount)}</span></button>`).join('') || '<div class="empty">No movements yet</div>'}</div>
+  </main>`;
+};
+function segPick(sh, id, cb) { const el = $('#' + id, sh); el.onclick = e => { const b = e.target.closest('button'); if (!b) return; $$('button', el).forEach(x => x.classList.toggle('on', x === b)); cb(b.dataset.v); }; }
+const segHTML = (id, opts, cur) => `<div class="seg" id="${id}">${opts.map(([v, l]) => `<button class="${v === cur ? 'on' : ''}" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</div>`;
+function expenseSheet() {
+  const st = { category: EXP_CATS[0], mode: 'Cash', paidBy: S.me.name };
+  openSheet(`<h3>Add expense</h3><div class="stack">
+    <div class="prefix"><span>₹</span><input class="in big" id="exAmt" inputmode="decimal" placeholder="0" autofocus aria-label="Amount"></div>
+    <label class="f">Category</label>${segHTML('exCat', EXP_CATS.map(c => [c, c]), st.category)}
+    <label class="f">Paid from</label>${segHTML('exMode', [['Cash', 'Cash'], ['Bank', 'Bank / UPI']], st.mode)}
+    <label class="f">Paid by</label>${segHTML('exBy', users().map(u => [u.name, u.name]), st.paidBy)}
+    <input class="in" type="date" id="exDate" value="${todayKey()}" aria-label="Date">
+    <input class="in" id="exNote" placeholder="Note (optional)">
+    <button class="btn brass" id="exSave">Save expense</button></div>`, sh => {
+    segPick(sh, 'exCat', v => st.category = v); segPick(sh, 'exMode', v => st.mode = v); segPick(sh, 'exBy', v => st.paidBy = v);
+    $('#exSave', sh).onclick = async () => {
+      try { await addExpense({ ...st, amount: $('#exAmt', sh).value, note: $('#exNote', sh).value, date: dateISO($('#exDate', sh).value) }); closeTopSheet(); toast('Expense saved'); onDataChanged(); }
+      catch (e) { toast(e.message); }
+    };
+  });
+}
+function dateISO(day) { if (!day || day === todayKey()) return nowISO(); return new Date(day + 'T12:00:00').toISOString(); }
+function transferSheet(kind) {
+  const names = users().map(u => [u.name, u.name]);
+  const st = { type: kind === 'opening' ? 'opening_cash' : kind, fromUser: S.me.name, toUser: (users().find(u => u.name !== S.me.name) || {}).name || S.me.name };
+  if (kind === 'withdraw') st.toUser = S.me.name;
+  const title = { handover: 'Cash handover', deposit: 'Deposit cash to bank', withdraw: 'Withdraw cash from bank', opening: 'Opening balance' }[kind];
+  openSheet(`<h3>${title}</h3><div class="stack">
+    ${kind === 'opening' ? `${segHTML('trType', [['opening_cash', 'Cash with a person'], ['opening_bank', 'Bank balance']], st.type)}` : ''}
+    <div class="prefix"><span>₹</span><input class="in big" id="trAmt" inputmode="decimal" placeholder="0" autofocus aria-label="Amount"></div>
+    ${kind === 'handover' || kind === 'deposit' ? `<label class="f">${kind === 'handover' ? 'From' : 'Cash given by'}</label>${segHTML('trFrom', names, st.fromUser)}` : ''}
+    ${kind === 'handover' || kind === 'withdraw' || kind === 'opening' ? `<div id="trToBox"><label class="f">${kind === 'handover' ? 'To' : kind === 'withdraw' ? 'Cash taken by' : 'Person'}</label>${segHTML('trTo', names, kind === 'opening' ? S.me.name : st.toUser)}</div>` : ''}
+    <input class="in" id="trNote" placeholder="Note (optional)">
+    <button class="btn brass" id="trSave">Save</button></div>`, sh => {
+    if (kind === 'opening') { st.toUser = S.me.name; segPick(sh, 'trType', v => { st.type = v; $('#trToBox', sh).classList.toggle('hide', v === 'opening_bank'); }); }
+    if ($('#trFrom', sh)) segPick(sh, 'trFrom', v => st.fromUser = v);
+    if ($('#trTo', sh)) segPick(sh, 'trTo', v => st.toUser = v);
+    $('#trSave', sh).onclick = async () => {
+      const t = { ...st, amount: $('#trAmt', sh).value, note: $('#trNote', sh).value };
+      if (t.type === 'deposit') t.toUser = ''; if (t.type === 'withdraw' || t.type.startsWith('opening')) t.fromUser = ''; if (t.type === 'opening_bank') t.toUser = '';
+      try { await addTransfer(t); closeTopSheet(); toast('Saved'); onDataChanged(); } catch (e) { toast(e.message); }
+    };
+  });
+}
+function moveSheet(table, id) {
+  const r = S.t[table].get(id); if (!r) return;
+  openSheet(`<h3>${table === 'Expenses' ? esc(r.category) : 'Cash movement'}</h3>
+    <div class="card" style="box-shadow:none;background:var(--pearl)"><div style="font:600 30px var(--serif)" class="money">${money(r.amount)}</div>
+    <div class="hint">${fmtDate(r.date)} · added by ${esc(r.createdBy)}${r.note ? ' · ' + esc(r.note) : ''}</div></div>
+    ${r.status !== 'void' ? `<button class="btn danger" style="margin-top:14px" id="mvVoid">${IC.ban} Void this entry</button>` : '<p class="hint">This entry is void.</p>'}`, sh => {
+    const b = $('#mvVoid', sh); if (b) b.onclick = () => askReasonPin('Void this entry', 'Why?', async reason => { await voidRow(table, id, reason); closeTopSheet(); toast('Entry voided'); onDataChanged(); });
+  });
+}
+
+/* ===== Expenses ===== */
+PAGES.expenses = () => {
+  const list = [...S.t.Expenses.values()].filter(e => !e.deleted).sort((a, b) => b.date.localeCompare(a.date));
+  const mk = todayKey().slice(0, 7), monthP = list.filter(e => e.status !== 'void' && dayKey(e.date).startsWith(mk)).reduce((a, e) => a + P(e.amount), 0);
+  return header('Expenses', 'This month ' + moneyP(monthP)) + `<main>
+    <button class="btn brass" data-act="exp">${IC.plus} Add expense</button>
+    <div class="list" style="margin-top:14px">${list.slice(0, 200).map(e => `<button class="row" data-act="move" data-k="Expenses" data-id="${esc(e.id)}">
+      <span class="grow"><span class="t" style="display:block">${esc(e.category)} ${e.status === 'void' ? '<span class="tag void">Void</span>' : ''}</span>
+      <span class="s" style="display:block">${fmtDate(e.date)} · ${esc(e.mode)} · ${esc(e.paidBy)}${e.note ? ' · ' + esc(e.note) : ''}</span></span>
+      <span class="amt money">${money(e.amount)}</span></button>`).join('') || '<div class="empty"><b>No expenses yet</b>Rent, bottles, delivery — add them here.</div>'}</div></main>`;
+};
+
+/* ===== Products (read-only, from the Sheet) ===== */
+PAGES.products = () => {
+  const g = new Map(); S.masters.Products.forEach(p => { if (!g.has(p.name)) g.set(p.name, []); g.get(p.name).push(p); });
+  return header('Products', S.masters.Products.length + ' rows in the Sheet') + `<main>
+    <p class="hint" style="margin-top:0">Optional. Items are typed on each bill. For a fixed price list, add rows in the Google Sheet’s Products tab, then tap Sync.</p>
+    <button class="btn ghost sm" data-act="syncTap">${IC.sync} Sync now</button>
+    <div class="list" style="margin-top:12px">${[...g].map(([n, arr]) => `<div class="row"><span class="grow"><span class="t" style="display:block">${esc(n)} ${arr.some(p => !p.active) ? '<span class="tag">Some sizes hidden</span>' : ''}</span>
+      <span class="s" style="display:block">${arr.map(p => `${esc(p.size || '—')} ${money(p.price)}${p.costPrice != null ? ' (cost ' + money(p.costPrice) + ')' : ''}`).join(' · ')}</span></span>
+      ${arr[0].type ? `<span class="tag">${esc(arr[0].type)}</span>` : ''}</div>`).join('') || '<div class="empty"><b>No fixed price list</b>Items are typed on each bill. For a price list, add name, size, type and price in the Sheet’s Products tab.</div>'}</div></main>`;
+};
+
+/* ===== Activity log ===== */
+PAGES.audit = () => {
+  const list = [...S.t.AuditLog.values()].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 200);
+  const label = a => { const s = a.tableName === 'Sales' && S.t.Sales.get(a.recordId); return s ? s.billNo : a.tableName; };
+  return header('Activity log', 'Who changed what') + `<main><div class="list">${list.map(a => `<button class="row" data-act="auditOpen" data-id="${esc(a.id)}">
+    <span class="tag ${a.action === 'void' ? 'rose' : a.action === 'conflict' ? 'brass' : ''}">${esc(a.action)}</span>
+    <span class="grow"><span class="t" style="display:block">${esc(label(a))} · ${esc(a.user)}</span><span class="s" style="display:block">${fmtDate(a.at)} ${fmtTime(a.at)}${a.reason ? ' · ' + esc(a.reason) : ''}</span></span></button>`).join('')
+    || '<div class="empty"><b>Nothing yet</b>Bill edits, voids and sync conflicts are recorded here.</div>'}</div></main>`;
+};
+function auditSheet(id) {
+  const a = S.t.AuditLog.get(id); if (!a) return;
+  const sum = j => { try { const o = JSON.parse(j || '{}'); return o.billNo ? `${o.billNo} · ${o.customerName} · total ${money(o.grandTotal)} · paid ${money(o.paidAtBill)} · ${o.status}${o.updatedBy ? ' · edited by ' + o.updatedBy : ''}`
+    : o.amount != null ? `${money(o.amount)} · ${o.status || ''}` : ''; } catch (e) { return ''; } };
+  openSheet(`<h3 style="text-transform:capitalize">${esc(a.action)}</h3><div class="stack">
+    <div class="hint" style="margin-top:-8px">${fmtDate(a.at)} ${fmtTime(a.at)} · ${esc(a.user)}</div>
+    ${a.reason ? `<div class="card" style="box-shadow:none;background:var(--pearl)">${esc(a.reason)}</div>` : ''}
+    <div><label class="f">Before</label><div class="card" style="box-shadow:none;background:var(--pearl);font-size:13.5px">${esc(sum(a.beforeJson)) || '—'}</div></div>
+    <div><label class="f">After</label><div class="card" style="box-shadow:none;background:var(--pearl);font-size:13.5px">${esc(sum(a.afterJson)) || '—'}</div></div></div>`);
+}
+
+/* ===== Settings ===== */
+PAGES.settings = () => {
+  const mask = v => v ? v.slice(0, 34) + (v.length > 34 ? '…' : '') : 'Not set';
+  return header('Settings', 'Khalifa Business Manager v' + APP_VERSION) + `<main>
+    <div class="card"><div style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--oud);border:0">${esc(S.me.code)}</div>
+      <div class="grow"><b style="font-size:17px">${esc(S.me.name)}</b><div class="hint" style="margin:0">Bills numbered KH-${esc(S.me.code)}-0001…</div></div></div>
+      <div class="grid2" style="margin-top:14px"><button class="btn ghost sm" data-act="changePin">Change PIN</button><button class="btn ghost sm" data-act="switchUser">Switch user</button></div></div>
+    <div class="h2">Google Sheet</div>
+    <div class="card stack"><div><label class="f">Apps Script URL</label><div style="word-break:break-all;font-size:13.5px">${esc(mask(S.url))}</div></div>
+      <div><label class="f">Secret key</label><div style="font-size:13.5px">${S.key ? '•'.repeat(Math.min(12, S.key.length)) : 'Not set'}</div></div>
+      <div class="grid2"><button class="btn ghost sm" data-act="editConn">Change</button><button class="btn ghost sm" data-act="testConn">Test connection</button></div></div>
+    <div class="h2">Sync</div>
+    <div class="card stack"><div style="display:flex;justify-content:space-between"><span>Status</span>${syncChip()}</div>
+      ${S.sync.state === 'err' ? `<div class="err">${esc(S.sync.msg)}</div>` : ''}
+      <div style="display:flex;justify-content:space-between"><span>Waiting to upload</span><b>${S.outbox.size}</b></div>
+      <div style="display:flex;justify-content:space-between"><span>Last synced</span><b>${S.lastSync ? fmtDate(new Date(S.lastSync).toISOString()) + ' ' + fmtTime(new Date(S.lastSync).toISOString()) : 'Never'}</b></div>
+      <div class="grid2"><button class="btn brass sm" data-act="syncTap">${IC.sync} Sync now</button><button class="btn ghost sm" data-act="resync">Download all again</button></div></div>
+    <div class="h2">Backup</div>
+    <div class="card stack"><p class="hint" style="margin:0">Everything is already saved in the Google Sheet. This file is an extra copy on this phone — keep it private, it contains customer numbers.</p>
+      <button class="btn ghost sm" data-act="backup">${IC.download} Download backup (JSON)</button></div>
+  </main>`;
+};
+
+/* ---------------- PIN pad, reason + PIN, lock ---------------- */
+function padHTML(id, light) { return `<div class="dots" id="${id}Dots">${'<i></i>'.repeat(4)}</div><div class="pad ${light ? 'light' : ''}" id="${id}">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}" aria-label="${k === '⌫' ? 'Delete' : k}">${k}</button>`).join('')}</div>`; }
+function bindPad(root, id, onDone) {
+  let val = ''; const dots = $('#' + id + 'Dots', root);
+  const show = () => $$('i', dots).forEach((d, i) => d.classList.toggle('on', i < val.length));
+  const api2 = { reset() { val = ''; show(); }, shake() { dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake'); val = ''; show(); } };
+  const press = k => { if (k === '⌫') val = val.slice(0, -1); else if (val.length < 4) val += k; show(); if (val.length === 4) { const v = val; setTimeout(() => onDone(v, api2), 80); } };
+  $('#' + id, root).onclick = e => { const b = e.target.closest('button'); if (b) press(b.dataset.k); };
+  PADS[id] = press;
+  return api2;
+}
+document.addEventListener('keydown', e => {
+  const pad = $('.pad'); if (!pad || !/^[0-9]$|^Backspace$/.test(e.key) || (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) return;
+  const press = PADS[pad.id]; if (press) press(e.key === 'Backspace' ? '⌫' : e.key);
+});
+function askReasonPin(title, reasonLabel, cb) {
+  openSheet(`<h3>${esc(title)}</h3><div class="stack">
+    ${reasonLabel ? `<textarea class="in" id="rsn" placeholder="${esc(reasonLabel)}" autofocus aria-label="Reason"></textarea>` : ''}
+    <label class="f" style="text-align:center">Enter your PIN</label></div>
+    <div style="display:flex;flex-direction:column;align-items:center">${padHTML('rpPad', true)}</div><div class="err" id="rpErr" style="text-align:center"></div>`, sh => {
+    bindPad(sh, 'rpPad', async (pin, pad) => {
+      const reason = reasonLabel ? $('#rsn', sh).value.trim() : '';
+      if (reasonLabel && reason.length < 3) { $('#rpErr', sh).textContent = 'Write a short reason first'; pad.shake(); return; }
+      if (!(await checkPin(pin))) { $('#rpErr', sh).textContent = 'Wrong PIN'; pad.shake(); return; }
+      cb(reason);
+    });
+  });
+}
+function lockView() {
+  return `<div class="lock"><img src="icons/logo.png" alt="Khalifa Attar & Perfumes" style="width:140px;margin-bottom:10px">
+    <div style="color:#bfae93">Enter PIN, ${esc(S.me.name)}</div>${padHTML('lockPad')}
+    <p class="hint" style="color:#8f7e69;text-align:center;max-width:280px;margin-top:26px">Forgot the PIN? Clear this app’s data and set it up again — your records are safe in the Google Sheet.</p></div>`;
+}
+function afterLockRender() {
+  bindPad(document, 'lockPad', async (pin, pad) => { if (await checkPin(pin)) { V.locked = false; render(); scheduleSync(200); } else pad.shake(); });
+}
+
+/* ---------------- first-time setup ---------------- */
+function setupView() {
+  const st = V.setup, step = st.step;
+  const bars = ['connect', 'who', 'pin', 'pin2'].map((s, i, a) => `<i class="${a.indexOf(step) >= i || step === 'done' ? 'on' : ''}"></i>`).join('');
+  if (step === 'connect') return `<div class="setup"><img class="logo" src="icons/logo.png" alt="Khalifa Attar & Perfumes">
+    <div class="steps">${bars}</div>
+    <h1>Business Manager</h1><p>Bills, customers and cash for the shop — one Google Sheet, every phone in sync.</p>
+    <div class="panel stack">
+      <div><label class="f" for="suUrl">Apps Script Web App URL</label><input class="in" id="suUrl" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(st.url || S.url)}" autocomplete="off"></div>
+      <div><label class="f" for="suKey">Secret key</label><input class="in" id="suKey" type="password" placeholder="The key saved in the Apps Script" value="${esc(st.key || S.key)}" autocomplete="off"></div>
+      <button class="btn brass" data-act="suConnect">Connect to the Sheet</button>
+      <div class="err" id="suErr">${esc(st.err || '')}</div>
+      <p class="hint">Internet is needed once, now. After this the app also works offline.</p></div></div>`;
+  if (step === 'who') return `<div class="setup"><div class="steps">${bars}</div><h1>Who is using this phone?</h1><p>Your bills will be numbered with your letter.</p>
+    <div class="panel"><div class="who">${(st.users || users()).map(u => `<button class="${st.code === u.code ? 'on' : ''}" data-act="suWho" data-code="${esc(u.code)}" data-name="${esc(u.name)}">
+      <span class="ucode ${esc(u.code)}" style="width:40px;height:40px;font-size:16px">${esc(u.code)}</span><span class="grow">${esc(u.name)}<div class="hint" style="margin:0;font-weight:500">Bills KH-${esc(u.code)}-0001</div></span></button>`).join('')}</div>
+      <button class="btn brass" style="margin-top:14px" data-act="suWhoNext" ${st.code ? '' : 'disabled'}>Continue</button></div></div>`;
+  if (step === 'pin' || step === 'pin2') return `<div class="setup" style="display:flex;flex-direction:column;align-items:center"><div class="steps" style="width:100%">${bars}</div>
+    <h1 style="text-align:center">${step === 'pin' ? 'Set your 4-digit PIN' : 'Enter it once more'}</h1><p style="text-align:center">${esc(st.name)} · needed to open the app and to edit or void bills.</p>${padHTML('suPad')}<div class="err" id="suErr" style="color:#f0a3b4">${esc(st.err || '')}</div></div>`;
+  return `<div class="setup"><h1>Getting your data…</h1><p id="suMsg">${esc(st.msg || 'Downloading bills and customers from the Sheet')}</p><div class="err" id="suErr">${esc(st.err || '')}</div>
+    ${st.err ? '<button class="btn brass" data-act="suRetry">Try again</button>' : ''}</div>`;
+}
+function afterSetupRender() {
+  const st = V.setup; if (!st) return;
+  if (st.step === 'pin') bindPad(document, 'suPad', pin => { st.pin = pin; st.err = ''; st.step = 'pin2'; render(); afterRender(); });
+  if (st.step === 'pin2') bindPad(document, 'suPad', async (pin, pad) => {
+    if (pin !== st.pin) { st.err = 'PINs did not match — try again'; st.step = 'pin'; render(); afterRender(); return; }
+    const salt = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    S.me = { code: st.code, name: st.name, salt, pinHash: await hashPin(pin, salt) };
+    S.url = st.url; S.key = st.key;
+    await saveMeta('profile', S.me); await saveMeta('conn', { url: S.url, key: S.key });
+    st.step = 'done'; render(); firstPull();
+  });
+}
+async function firstPull() {
+  const st = V.setup;
+  try {
+    if (!navigator.onLine) throw new Error('No internet');
+    await syncNow();
+    if (S.sync.state === 'err' || S.sync.state === 'offline') throw new Error(S.sync.msg || 'Could not sync');
+    V.setup = null; V.tab = 'home'; render(); afterRender(); toast('Welcome, ' + S.me.name);
+  } catch (e) { st.err = e.message + ' — check internet and try again.'; render(); }
+}
+
+/* ---------------- WhatsApp: open chat first, then share PDF + caption ---------------- */
+function openWaChat(phone) { const a = document.createElement('a'); a.href = 'https://wa.me/' + phone; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
+async function startWhatsApp(id) {
+  const s = S.t.Sales.get(id); if (!s) return;
+  openWaChat(s.customerPhone);                                   // STEP 1 — must happen inside the tap
+  WA = { id, name: s.customerName, caption: buildCaption(s), file: null, err: '' };
+  waSheet();
+  try { const blob = await makePdf(s); WA.file = new File([blob], pdfName(s), { type: 'application/pdf' }); WA.size = blob.size; }
+  catch (e) { WA.err = 'Could not make the PDF: ' + e.message; }
+  if ($('#waBox')) waSheet(true);
+}
+function waCanShareFiles() { try { return !!(WA && WA.file && navigator.canShare && navigator.canShare({ files: [WA.file] })); } catch (e) { return false; } }
+function waSheet(update) {
+  if (!WA) return;
+  const ready = !!WA.file, can = ready && waCanShareFiles(), ios = isIOS();
+  const html = `<div class="wa-step" id="waBox"><div class="num">2</div><h3>Send PDF + Message 📎</h3>
+    <p class="hint" style="margin-top:0">${esc(WA.name)}’s WhatsApp chat is open. Now send the bill.</p>
+    ${WA.err ? `<div class="err">${esc(WA.err)}</div>` : ''}
+    ${can || !ready ? `<button class="btn wa big-share" id="waShare" ${ready ? '' : 'disabled'}>${ready ? IC.wa + ' Send PDF + Message 📎' : 'Preparing PDF…'}</button>
+      <div class="help">Choose <b>WhatsApp</b> → pick <b>${esc(WA.name)}</b> at the top of the chat list → Send.
+      ${ios ? '<br><br>The message is copied — in the caption box, <b>long-press → Paste</b>.' : '<br><br>If the message doesn’t come with the PDF: <b>long-press → Paste</b> in the caption box (it is already copied).'}</div>`
+    : `<button class="btn wa big-share" id="waFallback">${IC.download} Save PDF + copy message</button>
+      <div class="help" id="waFbHelp">This phone can’t share files directly. The PDF will be saved and the message copied — in the customer’s chat, <b>attach the PDF and paste the message</b>.</div>`}
+    <div class="grid2"><button class="btn ghost sm" id="waAgain">Open chat again</button><button class="btn ghost sm" id="waDone">${can ? 'Close' : 'Mark as sent ✓'}</button></div></div>`;
+  const mount = sh => {
+    const share = $('#waShare', sh);
+    if (share) share.onclick = () => {
+      const caption = WA.caption, file = WA.file, id = WA.id;
+      try { navigator.clipboard && navigator.clipboard.writeText(caption).catch(() => {}); } catch (e) { /* ignore */ }
+      // share() is called in the same tap (Safari needs that), files + caption together
+      navigator.share({ files: [file], text: caption, title: file.name }).then(async () => {
+        await markShared(id); WA = null; closeTopSheet(); toast('Bill sent ✓'); onDataChanged();
+      }).catch(e => { if (e && e.name !== 'AbortError') toast('Share failed: ' + e.message); });
+    };
+    const fb = $('#waFallback', sh);
+    if (fb) fb.onclick = () => {
+      const url = URL.createObjectURL(WA.file); const a = document.createElement('a'); a.href = url; a.download = WA.file.name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      try { navigator.clipboard.writeText(WA.caption); } catch (e) { /* ignore */ }
+      $('#waFbHelp', sh).innerHTML = '<b>PDF saved and message copied</b> — attach and paste in the customer’s chat, then tap “Mark as sent”.';
+    };
+    $('#waAgain', sh).onclick = () => WA && openWaChat(S.t.Sales.get(WA.id).customerPhone);
+    $('#waDone', sh).onclick = async () => { const id = WA && WA.id; const mark = !can; WA = null; closeTopSheet(); if (mark && id) { await markShared(id); toast('Marked as sent ✓'); onDataChanged(); } };
+  };
+  const cur = $('#waBox');
+  if (update && cur) { const sh = cur.closest('.sheet'); sh.innerHTML = '<div class="grab"></div>' + html; mount(sh); }
+  else if (!cur) { const sh = openSheet(html, mount); V.stack[V.stack.length - 1].onClose = () => { WA = null; }; return sh; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') { V.hiddenAt = Date.now(); return; }
+  if (WA && !$('#waBox')) waSheet();                               // STEP 2 pops up when they come back
+  if (S.me && !WA && V.hiddenAt && Date.now() - V.hiddenAt > 10 * 60 * 1000 && !V.setup) { V.locked = true; closeSheetDom(); render(); afterRender(); }
+  if (S.me) scheduleSync(300);
+});
+async function downloadPdf(id) {
+  const s = S.t.Sales.get(id); toast('Making PDF…');
+  const blob = await makePdf(s);
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = pdfName(s); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+function downloadText(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type })); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+/* ---------------- events ---------------- */
+const ACT = {
+  back: () => goBack(),
+  tab: el => { V.tab = el.dataset.tab; renderBase(); window.scrollTo(0, 0); },
+  page: el => openPage(el.dataset.p),
+  newBill: () => openNewBill(),
+  newBillFromSaved: () => { NB = newNB(); replacePage('newbill'); },
+  openBill: el => { const top = V.stack[V.stack.length - 1]; if (top && top.name === 'saved') replacePage('bill', el.dataset.id); else openPage('bill', el.dataset.id); },
+  openCust: el => openPage('customer', el.dataset.id),
+  billsF: el => { V.billsF = el.dataset.f; renderBase(); },
+  syncTap: () => { if (!navigator.onLine) toast('Offline — bills are saved on this phone and will upload when online'); else { toast('Syncing…'); syncNow().then(() => { if (S.sync.state === 'err') toast(S.sync.msg); }); } },
+  wa: el => startWhatsApp(el.dataset.id),
+  pdf: el => downloadPdf(el.dataset.id).catch(e => toast(e.message)),
+  editBill: el => { const id = el.dataset.id; goBack(); openEditBill(id); },
+  voidBill: el => askReasonPin('Void this bill', 'Why is it being voided?', async reason => { await voidBill(el.dataset.id, reason); closeTopSheet(); toast('Bill voided'); onDataChanged(); }),
+  receive: el => receiveSheet(el.dataset.id),
+  exp: () => expenseSheet(),
+  tr: el => transferSheet(el.dataset.t),
+  move: el => moveSheet(el.dataset.k, el.dataset.id),
+  auditOpen: el => auditSheet(el.dataset.id),
+  repKind: el => { V.rep.kind = el.dataset.k; if (el.dataset.k === 'custom' && !V.rep.from) { V.rep.from = todayKey().slice(0, 8) + '01'; V.rep.to = todayKey(); } refreshTop(); },
+  repUser: el => { V.rep.user = el.dataset.u; refreshTop(); },
+  csv: () => { const r = report(rangeFor(V.rep.kind, V.rep.from, V.rep.to), V.rep.user); downloadText(`khalifa-bills-${todayKey()}.csv`, billsCSV(r.sales), 'text/csv;charset=utf-8'); },
+  lockNow: () => { V.locked = true; render(); afterRender(); },
+  // new bill
+  itCat: el => { NB.it = Object.assign(newIt(el.dataset.c), { name: NB.it.name, price: NB.it.price, qty: NB.it.qty }); renderComposer(false); },
+  itSize: el => { NB.it.size = el.dataset.z; $$('.sizes-seg button').forEach(b => b.classList.toggle('on', b === el)); const o = $('#itOther'); if (o) o.value = ''; },
+  itQty: el => { NB.it.qty = Math.max(1, NB.it.qty + Number(el.dataset.d)); $('#itQty').textContent = NB.it.qty; },
+  itPick: el => { const x = NB.sugs[+el.dataset.i]; if (!x) return; Object.assign(NB.it, { name: x.name, size: x.size, price: x.price }); renderComposer(false); const pr = $('#itPrice'); if (pr) pr.focus(); },
+  itAdd: () => itAdd(),
+  nbDel: el => { NB.lines.splice(+el.dataset.i, 1); $('#nbLines').innerHTML = nbLinesHTML(); nbUpdate(); },
+  nbQty: el => { const l = NB.lines[+el.dataset.i]; l.qty = Math.max(1, (Number(l.qty) || 1) + Number(el.dataset.d)); nbUpdate(); },
+  nbMode: el => { NB.mode = el.dataset.m; $$('#nbModes button').forEach(b => b.classList.toggle('on', b === el)); const pi = $('#nbPaid');
+    if (NB.mode === 'Credit') { NB.paid = 0; pi.value = 0; pi.disabled = true; } else { pi.disabled = false; if (!P(NB.paid)) { NB.paidTouched = false; } } nbUpdate(); },
+  nbGst: el => { NB.gstPercent = Number(el.dataset.g); $$('[data-act="nbGst"]').forEach(b => b.classList.toggle('on', b === el)); nbUpdate(); },
+  nbSave: () => nbSave(),
+  slipToggle: () => $('#slip').classList.toggle('open'),
+  // settings
+  changePin: () => askReasonPin('Current PIN', '', () => newPinSheet()),
+  switchUser: () => askReasonPin('Switch user', '', async () => {
+    closeTopSheet(); while (V.stack.length) goBack();
+    V.setup = { step: 'who', url: S.url, key: S.key, users: users() }; await saveMeta('profile', null); S.me = null; render(); afterRender();
+  }),
+  editConn: () => askReasonPin('Change Sheet connection', '', () => connSheet()),
+  testConn: async () => { try { await api('ping'); toast('Connected to the Sheet ✓'); } catch (e) { toast(e.message); } },
+  resync: async () => { S.cursor = 0; await saveMeta('cursor', 0); toast('Downloading everything again…'); await syncNow(); toast(S.sync.state === 'err' ? S.sync.msg : 'Done'); },
+  backup: () => {
+    const data = { app: 'khalifa-business-manager', version: APP_VERSION, exportedAt: nowISO(), by: S.me.name, tables: Object.fromEntries(TABLES.map(t => [t, [...S.t[t].values()]])) };
+    downloadText(`khalifa-backup-${todayKey()}.json`, JSON.stringify(data), 'application/json');
+  },
+  // setup
+  suConnect: async () => {
+    const st = V.setup; st.url = $('#suUrl').value.trim(); st.key = $('#suKey').value.trim(); st.err = '';
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(st.url) && !/^https?:\/\/(localhost|127\.0\.0\.1)/.test(st.url)) { st.err = 'Paste the Web App URL that ends with /exec'; render(); return; }
+    if (!st.key) { st.err = 'Enter the secret key'; render(); return; }
+    $('#suErr').textContent = 'Connecting…';
+    try { const j = await api('ping', {}, st.url, st.key); applyMasters(j.masters); st.users = users(); st.step = 'who'; render(); }
+    catch (e) { st.err = e.message; render(); }
+  },
+  suWho: el => { V.setup.code = el.dataset.code; V.setup.name = el.dataset.name; render(); },
+  suWhoNext: () => { V.setup.step = 'pin'; render(); afterRender(); },
+  suRetry: () => { V.setup.err = ''; render(); firstPull(); }
+};
+function refreshTop() { const top = V.stack[V.stack.length - 1]; if (top && top.type === 'page') refreshPage(top); }
+function newPinSheet() {
+  let first = null;
+  openSheet(`<h3 id="npT">New PIN</h3><div style="display:flex;flex-direction:column;align-items:center">${padHTML('npPad', true)}</div><div class="err" id="npErr" style="text-align:center"></div>`, sh => {
+    bindPad(sh, 'npPad', async (pin, pad) => {
+      if (!first) { first = pin; $('#npT', sh).textContent = 'Enter it once more'; pad.reset(); return; }
+      if (pin !== first) { first = null; $('#npT', sh).textContent = 'New PIN'; $('#npErr', sh).textContent = 'PINs did not match'; pad.shake(); return; }
+      S.me.pinHash = await hashPin(pin, S.me.salt); await saveMeta('profile', S.me); closeTopSheet(); toast('PIN changed');
+    });
+  });
+}
+function connSheet() {
+  openSheet(`<h3>Google Sheet connection</h3><div class="stack"><input class="in" id="cnUrl" value="${esc(S.url)}" placeholder="Apps Script /exec URL" aria-label="URL">
+    <input class="in" id="cnKey" type="password" value="${esc(S.key)}" placeholder="Secret key" aria-label="Secret key"><button class="btn brass" id="cnSave">Test & save</button><div class="err" id="cnErr"></div></div>`, sh => {
+    $('#cnSave', sh).onclick = async () => {
+      const url = $('#cnUrl', sh).value.trim(), key = $('#cnKey', sh).value.trim();
+      try { await api('ping', {}, url, key); S.url = url; S.key = key; await saveMeta('conn', { url, key }); closeTopSheet(); toast('Saved ✓'); scheduleSync(100); }
+      catch (e) { $('#cnErr', sh).textContent = e.message; }
+    };
+  });
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const fn = ACT[el.dataset.act]; if (!fn) return;
+  e.preventDefault(); fn(el, e);
+});
+document.addEventListener('input', e => {
+  const el = e.target; const k = el.dataset && el.dataset.in; if (!k) return;
+  const v = el.value;
+  switch (k) {
+    case 'billsQ': V.billsQ = v; { const pos = el.selectionStart; renderBase(); const n = $('[data-in="billsQ"]'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) { /* ignore */ } } break;
+    case 'custQ': V.custQ = v; { const pos = el.selectionStart; renderBase(); const n = $('[data-in="custQ"]'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) { /* ignore */ } } break;
+    case 'nbPhone': NB.phone = v; nbLookup(true); nbUpdate(); break;
+    case 'nbName': NB.name = v; NB.nameAuto = false; nbUpdate(); break;
+    case 'itName': NB.it.name = v; $('#itSug').innerHTML = sugHTML(); break;
+    case 'itPrice': NB.it.price = v; break;
+    case 'itFree': NB.it.size = v; break;
+    case 'itOther': { const d = v.replace(/[^\d.]/g, ''); NB.it.size = d ? d + 'ml' : ''; $$('.sizes-seg button').forEach(b => b.classList.remove('on')); } break;
+    case 'nbRate': NB.lines[+el.dataset.i].rate = v; nbUpdate(); break;
+    case 'nbDisc': NB.lines[+el.dataset.i].discount = v; nbUpdate(); break;
+    case 'nbBillDisc': NB.billDiscount = v; nbUpdate(); break;
+    case 'nbPaid': NB.paid = v; NB.paidTouched = true; nbUpdate(); break;
+    case 'repFrom': V.rep.from = v; refreshTop(); break;
+    case 'repTo': V.rep.to = v; refreshTop(); break;
+    case 'closeDay': V.closeDay = v; refreshTop(); break;
+  }
+});
+function afterRender() { if (V.locked) afterLockRender(); else if (V.setup) afterSetupRender(); }
+
+/* ---------------- boot ---------------- */
+async function boot() {
+  await loadAll();
+  if (S.me && S.url) V.locked = true;
+  render(); afterRender();
+  window.addEventListener('online', () => scheduleSync(200));
+  window.addEventListener('offline', () => setSync('offline'));
+  setInterval(() => { if (S.me && !V.locked && navigator.onLine) syncNow(); }, 120000);
+  if (!navigator.onLine) setSync('offline');
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+window.KBM = { S, V, saveBill, syncNow, report, cashBook, dayClose, customerDueP, buildCaption, makePdf, invoiceHTML, calcBill, nextBillNo, receivePayment, addExpense, addTransfer, voidBill, markShared };
+boot();
+
+</script>
+</body>
+</html>

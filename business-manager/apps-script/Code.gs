@@ -332,17 +332,24 @@ function setupSheet() {
   if (users.getLastRow() < 2) {
     users.getRange(2, 1, 3, 3).setValues([['Y', 'Yaseen', 'TRUE'], ['H', 'Huzaifa', 'TRUE'], ['M', 'Mushtaq', 'TRUE']]);
   }
+  // Settings: adds only the keys that are missing, so running setupSheet again never overwrites your values
   var settings = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Settings');
-  if (settings.getLastRow() < 2) {
-    settings.getRange(2, 1, 8, 2).setValues([
-      ['shopName', 'Khalifa Attar & Perfumes'],
-      ['address', ''],
-      ['phone', '+91 98196 64949'],
-      ['website', 'khalifaattarperfumes.com'],
-      ['gstEnabled', 'FALSE'],
-      ['gstin', ''],
-      ['thankYou', 'Thank you for shopping with us!'],
-      ['currency', '₹']
-    ]);
+  var defaults = [
+    ['shopName', 'Khalifa Attar & Perfumes'],
+    ['address', ''],
+    ['phone', '+91 98196 64949'],
+    ['website', 'khalifaattarperfumes.com'],
+    ['gstEnabled', 'FALSE'],
+    ['gstin', ''],
+    ['thankYou', 'Thank you for shopping with us!'],
+    ['currency', '₹'],
+    ['upiId', 'khalifaattarperfumes@okicici'],
+    ['upiName', 'Khalifa Attar and Perfumes']
+  ];
+  var have = {};
+  if (settings.getLastRow() >= 2) {
+    settings.getRange(2, 1, settings.getLastRow() - 1, 1).getValues().forEach(function (r) { have[String(r[0]).trim()] = true; });
   }
+  var missing = defaults.filter(function (d) { return !have[d[0]]; });
+  if (missing.length) settings.getRange(settings.getLastRow() + 1, 1, missing.length, 2).setValues(missing);
 }

@@ -254,3 +254,17 @@ table.t th:first-child,table.t td:first-child{text-align:left}
 .sizes-seg button{height:40px;padding:0 13px;font-size:14px}
 .sugs{display:flex;gap:6px;flex-wrap:wrap}
 .sugs .size{border:1.5px solid var(--line);background:#fff}
+
+/* ---------- send: paid / unpaid choice, UPI QR ---------- */
+.paychoice{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.paychoice button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:14px;border-radius:var(--r-md);border:1.5px solid var(--line);background:#fff;min-height:96px}
+.paychoice button b{font-size:17px}
+.paychoice button span{font-size:13px;color:var(--muted)}
+.paychoice button i{font-style:normal;font-size:12px;font-weight:700;color:var(--brass-dk);margin-top:auto}
+.paychoice button.on{border-color:var(--oud);background:var(--oud);color:#f4ecdc}
+.paychoice button.on span{color:#cdbfa6}.paychoice button.on i{color:var(--brass-lt)}
+.qrnote{display:flex;gap:12px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--brass-wash);font-size:13.5px}
+.qrnote img{width:56px;height:56px;image-rendering:pixelated;background:#fff;border-radius:6px;flex:none}
+.qrnote span{color:var(--muted);font-size:12.5px}
+.qrbig{background:#fff;border:1.5px solid var(--brass);border-radius:18px;padding:14px;margin:10px auto 10px;width:max-content;max-width:100%}
+.qrbig img{width:min(250px,62vw);height:auto;aspect-ratio:1;display:block;image-rendering:pixelated}

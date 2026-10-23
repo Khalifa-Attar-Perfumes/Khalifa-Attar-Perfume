@@ -15,6 +15,7 @@ const IC = {
   wa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.8-.9-2-1s-.5-.1-.7.2-.8 1-.9 1.2-.3.2-.6.1a8.2 8.2 0 0 1-4-3.5c-.3-.5.3-.5.9-1.6.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6a1.1 1.1 0 0 0-.8.4 3.4 3.4 0 0 0-1 2.5 5.9 5.9 0 0 0 1.2 3.1 13.4 13.4 0 0 0 5.2 4.6c1.9.8 2.7.9 3.6.7a3.1 3.1 0 0 0 2-1.4 2.5 2.5 0 0 0 .2-1.4c-.1-.2-.3-.3-.6-.4M12 21.8a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4A9.9 9.9 0 1 1 12 21.8m8.4-18.3A11.8 11.8 0 0 0 1.8 17.8L.1 24l6.3-1.7A11.9 11.9 0 0 0 24 12a11.8 11.8 0 0 0-3.6-8.5"/></svg>',
   download: SVG('<path d="M12 4v11m0 0 4.5-4.5M12 15l-4.5-4.5"/><path d="M4 19h16"/>'),
   edit: SVG('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'),
+  qr: SVG('<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 14h2M14 18v2h2M18 18h2v2"/>'),
   ban: SVG('<circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"/>'),
   chart: SVG('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
   wallet: SVG('<path d="M3 7a2 2 0 0 1 2-2h13v4"/><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="16.5" cy="13.5" r="1.3"/>'),
@@ -409,6 +410,7 @@ PAGES.saved = id => {
     <div class="hint" style="font-size:14px">${esc(s.customerName)} · ${esc(fmtPhone(s.customerPhone))}${dueP > 0 ? ` · <b style="color:var(--rose)">due ${moneyP(dueP)}</b>` : ''}</div>
     <div class="stack" style="margin-top:26px;text-align:left">
       <button class="btn wa big-share" data-act="wa" data-id="${esc(s.id)}">${IC.wa} Send on WhatsApp</button>
+      ${canQr(s) ? `<button class="btn ghost" data-act="showQr" data-id="${esc(s.id)}">${IC.qr} Show UPI QR · ${moneyP(dueP)}</button>` : ''}
       <div class="grid2"><button class="btn ghost" data-act="openBill" data-id="${esc(s.id)}">View bill</button><button class="btn ghost" data-act="newBillFromSaved">${IC.plus} New bill</button></div>
     </div>
   </main>`;
@@ -424,6 +426,7 @@ PAGES.bill = id => {
     <div class="inv-wrap"><div class="inv-scale">${invoiceHTML(s)}</div></div>
     <div class="stack" style="margin-top:14px">
       ${live ? `<button class="btn wa big-share" data-act="wa" data-id="${esc(s.id)}">${IC.wa} ${s.sharedAt ? 'Send again on WhatsApp' : 'Send on WhatsApp'}</button>` : ''}
+      ${canQr(s) ? `<button class="btn ghost" data-act="showQr" data-id="${esc(s.id)}">${IC.qr} Show UPI QR · ${moneyP(saleDueP(s))}</button>` : ''}
       <div class="grid2"><button class="btn ghost" data-act="pdf" data-id="${esc(s.id)}">${IC.download} PDF</button>
         <button class="btn ghost" data-act="openCust" data-id="${esc(s.customerId)}">${IC.users} Customer</button></div>
       ${live ? `<div class="grid2"><button class="btn ghost" data-act="editBill" data-id="${esc(s.id)}">${IC.edit} Edit</button>
@@ -742,14 +745,83 @@ async function firstPull() {
 
 /* ---------------- WhatsApp: open chat first, then share PDF + caption ---------------- */
 function openWaChat(phone) { const a = document.createElement('a'); a.href = 'https://wa.me/' + phone; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
-async function startWhatsApp(id) {
+/* STEP 0 — before sending: is the bill paid? Paid → no QR. Unpaid → UPI QR for the due amount goes in the PDF. */
+function sendSheet(id) {
   const s = S.t.Sales.get(id); if (!s) return;
+  const dueP = saleDueP(s), qrOk = canQr(s);
+  let choice = dueP > 0 ? 'unpaid' : 'paid', mode = 'Cash';
+  const html = `<h3>Send bill on WhatsApp</h3>
+    <p class="hint" style="margin-top:-8px">${esc(s.billNo)} · ${esc(s.customerName)} · total <b class="money">${money(s.grandTotal)}</b></p>
+    <div class="h2" style="margin-top:4px">Is this bill paid?</div>
+    <div class="paychoice" id="scChoice">
+      <button data-v="paid"><b>Paid</b><span>${dueP > 0 ? 'Customer has paid now' : 'Paid in full · ' + esc(salePayModes(s))}</span><i>No QR in the bill</i></button>
+      <button data-v="unpaid"><b>Unpaid</b><span>${dueP > 0 ? 'Due ' + moneyP(dueP) : 'Nothing is due'}</span><i>UPI QR goes with the bill</i></button>
+    </div>
+    <div id="scMore"></div>
+    <button class="btn wa big-share" id="scGo" style="margin-top:14px"></button>
+    <button class="btn ghost sm hide" id="scPlain" style="margin:10px auto 0;display:block">Send without QR (keep it due)</button>`;
+  openSheet(html, sh => {
+    const draw = () => {
+      $$('#scChoice button', sh).forEach(b => b.classList.toggle('on', b.dataset.v === choice));
+      const more = $('#scMore', sh), go = $('#scGo', sh), plain = $('#scPlain', sh);
+      go.disabled = false; plain.classList.add('hide');
+      if (choice === 'paid' && dueP > 0) {
+        more.innerHTML = `<div class="mini" style="margin-top:12px"><label>${moneyP(dueP)} received by</label></div>${segHTML('scMode', ['Cash', 'UPI', 'Card', 'Bank Transfer'].map(m => [m, m]), mode)}
+          <div class="hint">This payment is saved to the bill (received by ${esc(S.me.name)}).</div>`;
+        segPick(sh, 'scMode', v => { mode = v; });
+        go.innerHTML = `${IC.wa} Save payment & send`;
+      } else if (choice === 'paid') {
+        more.innerHTML = ''; go.innerHTML = `${IC.wa} Send bill`;
+      } else if (dueP > 0 && qrOk) {
+        more.innerHTML = `<div class="qrnote"><img src="${qrDataURL(upiLink(s, dueP), 4)}" alt=""><div>A UPI QR for <b class="money">${moneyP(dueP)}</b> is added to the PDF.<br><span>Pays to ${esc(upiId())}</span></div></div>`;
+        go.innerHTML = `${IC.wa} Send with UPI QR`; plain.classList.remove('hide');
+      } else if (dueP > 0) {
+        more.innerHTML = `<div class="err" style="margin-top:10px">No valid UPI ID — add <b>upiId</b> in the Sheet’s Settings tab, then Sync.</div>`;
+        go.innerHTML = `${IC.wa} Send without QR`;
+      } else {
+        more.innerHTML = `<div class="hint" style="margin-top:10px">This bill is saved as <b>paid in full</b>. To ask for payment, edit the bill and set Payment to <b>Credit</b> (or lower “Paid now”), then send it.</div>
+          <button class="btn ghost sm" id="scEdit" style="margin-top:8px">${IC.edit} Edit bill</button>`;
+        $('#scEdit', sh).onclick = () => { goBack(); openEditBill(id); };
+        go.innerHTML = 'Nothing due'; go.disabled = true;
+      }
+    };
+    $('#scChoice', sh).onclick = e => { const b = e.target.closest('button'); if (!b) return; choice = b.dataset.v; draw(); };
+    $('#scGo', sh).onclick = () => {
+      if (choice === 'paid') startWhatsApp(id, dueP > 0 ? { payMode: mode } : {});
+      else startWhatsApp(id, { qr: dueP > 0 && qrOk });
+    };
+    $('#scPlain', sh).onclick = () => startWhatsApp(id, {});
+    draw();
+  });
+}
+async function startWhatsApp(id, opts = {}) {
+  let s = S.t.Sales.get(id); if (!s) return;
   openWaChat(s.customerPhone);                                   // STEP 1 — must happen inside the tap
-  WA = { id, name: s.customerName, caption: buildCaption(s), file: null, err: '' };
+  const w = WA = { id, name: s.customerName, caption: '', file: null, err: '', qr: false, dueP: 0 };
   waSheet();
-  try { const blob = await makePdf(s); WA.file = new File([blob], pdfName(s), { type: 'application/pdf' }); WA.size = blob.size; }
-  catch (e) { WA.err = 'Could not make the PDF: ' + e.message; }
-  if ($('#waBox')) waSheet(true);
+  try {
+    if (opts.payMode) { await receiveBillPayment(id, opts.payMode); s = S.t.Sales.get(id); toast('Payment saved'); }
+    w.qr = !!opts.qr && canQr(s); w.dueP = saleDueP(s);
+    w.caption = buildCaption(s, { qr: w.qr });
+    const blob = await makePdf(s, { qr: w.qr }); w.file = new File([blob], pdfName(s), { type: 'application/pdf' }); w.size = blob.size;
+  } catch (e) { w.err = 'Could not make the PDF: ' + e.message; }
+  if (WA === w && $('#waBox')) waSheet(true);
+}
+function qrSheet(id) {
+  const s = S.t.Sales.get(id); if (!canQr(s)) { toast('Nothing is due on this bill'); return; }
+  const dueP = saleDueP(s); let mode = 'UPI';
+  openSheet(`<div style="text-align:center"><h3 style="margin-bottom:2px">Scan to pay <span class="money">${moneyP(dueP)}</span></h3>
+      <p class="hint" style="margin-top:0">${esc(s.billNo)} · ${esc(s.customerName)}</p>
+      <div class="qrbig"><img src="${qrDataURL(upiLink(s, dueP), 10)}" alt="UPI QR code for ${esc(moneyP(dueP))}"></div>
+      <div class="hint">UPI ID: <b>${esc(upiId())}</b><br>GPay · PhonePe · Paytm · any UPI app</div></div>
+    <div class="mini" style="margin-top:14px"><label>Once the money arrives, received by</label></div>
+    ${segHTML('qrMode', ['UPI', 'Cash', 'Card', 'Bank Transfer'].map(m => [m, m]), mode)}
+    <button class="btn brass" id="qrPaid" style="margin-top:12px">Mark ${moneyP(dueP)} as received</button>`, sh => {
+    segPick(sh, 'qrMode', v => { mode = v; });
+    $('#qrPaid', sh).onclick = async () => {
+      try { await receiveBillPayment(id, mode); closeTopSheet(); toast('Payment saved'); onDataChanged(); } catch (e) { toast(e.message); }
+    };
+  });
 }
 function waCanShareFiles() { try { return !!(WA && WA.file && navigator.canShare && navigator.canShare({ files: [WA.file] })); } catch (e) { return false; } }
 function waSheet(update) {
@@ -757,6 +829,7 @@ function waSheet(update) {
   const ready = !!WA.file, can = ready && waCanShareFiles(), ios = isIOS();
   const html = `<div class="wa-step" id="waBox"><div class="num">2</div><h3>Send PDF + Message 📎</h3>
     <p class="hint" style="margin-top:0">${esc(WA.name)}’s WhatsApp chat is open. Now send the bill.</p>
+    ${WA.qr ? `<div class="found" style="margin-bottom:10px">UPI QR for <b class="money">${moneyP(WA.dueP)}</b> is in the PDF</div>` : ''}
     ${WA.err ? `<div class="err">${esc(WA.err)}</div>` : ''}
     ${can || !ready ? `<button class="btn wa big-share" id="waShare" ${ready ? '' : 'disabled'}>${ready ? IC.wa + ' Send PDF + Message 📎' : 'Preparing PDF…'}</button>
       <div class="help">Choose <b>WhatsApp</b> → pick <b>${esc(WA.name)}</b> at the top of the chat list → Send.
@@ -786,7 +859,7 @@ function waSheet(update) {
   };
   const cur = $('#waBox');
   if (update && cur) { const sh = cur.closest('.sheet'); sh.innerHTML = '<div class="grab"></div>' + html; mount(sh); }
-  else if (!cur) { const sh = openSheet(html, mount); V.stack[V.stack.length - 1].onClose = () => { WA = null; }; return sh; }
+  else if (!cur) { const sh = openSheet(html, mount); V.stack[V.stack.length - 1].onClose = () => { WA = null; setTimeout(refreshTop, 0); }; return sh; }
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') { V.hiddenAt = Date.now(); return; }
@@ -796,7 +869,7 @@ document.addEventListener('visibilitychange', () => {
 });
 async function downloadPdf(id) {
   const s = S.t.Sales.get(id); toast('Making PDF…');
-  const blob = await makePdf(s);
+  const blob = await makePdf(s, { qr: true });               // a bill with money due carries the UPI QR
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = pdfName(s); document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
@@ -816,7 +889,8 @@ const ACT = {
   openCust: el => openPage('customer', el.dataset.id),
   billsF: el => { V.billsF = el.dataset.f; renderBase(); },
   syncTap: () => { if (!navigator.onLine) toast('Offline — bills are saved on this phone and will upload when online'); else { toast('Syncing…'); syncNow().then(() => { if (S.sync.state === 'err') toast(S.sync.msg); }); } },
-  wa: el => startWhatsApp(el.dataset.id),
+  wa: el => sendSheet(el.dataset.id),
+  showQr: el => qrSheet(el.dataset.id),
   pdf: el => downloadPdf(el.dataset.id).catch(e => toast(e.message)),
   editBill: el => { const id = el.dataset.id; goBack(); openEditBill(id); },
   voidBill: el => askReasonPin('Void this bill', 'Why is it being voided?', async reason => { await voidBill(el.dataset.id, reason); closeTopSheet(); toast('Bill voided'); onDataChanged(); }),
@@ -928,5 +1002,5 @@ async function boot() {
   if (!navigator.onLine) setSync('offline');
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-window.KBM = { S, V, saveBill, syncNow, report, cashBook, dayClose, customerDueP, buildCaption, makePdf, invoiceHTML, calcBill, nextBillNo, receivePayment, addExpense, addTransfer, voidBill, markShared };
+window.KBM = { S, V, saveBill, syncNow, report, cashBook, dayClose, customerDueP, buildCaption, makePdf, invoiceHTML, calcBill, nextBillNo, receivePayment, addExpense, addTransfer, voidBill, markShared, receiveBillPayment, saleDueP, canQr, upiLink };
 boot();

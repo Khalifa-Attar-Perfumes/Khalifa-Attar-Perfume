@@ -2,7 +2,7 @@
 /* =====================================================================
    Khalifa Business Manager — core (data, sync, money maths, PDF, WhatsApp)
    ===================================================================== */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const DB_NAME = 'khalifa-bm';
 const TABLES = ['Customers', 'Sales', 'Payments', 'Expenses', 'Transfers', 'AuditLog'];
 const NUMERIC = new Set(['rev', 'serverUpdatedAt', 'subTotal', 'lineDiscount', 'billDiscount', 'gstPercent',
@@ -177,6 +177,13 @@ const salesList = () => [...S.t.Sales.values()].filter(liveSale);
 const payList = () => [...S.t.Payments.values()].filter(livePay);
 function saleItems(s) { try { return JSON.parse(s.itemsJson || '[]'); } catch (e) { return []; } }
 function salePaidP(s) { return payList().filter(p => p.saleId === s.id).reduce((a, p) => a + P(p.amount), 0); }
+function saleDueP(s) { return Math.max(0, P(s.grandTotal) - salePaidP(s)); }
+// "Cash", "Credit" or "Credit → UPI" style text: how this bill was actually paid
+function salePayModes(s) {
+  const modes = [...new Set(payList().filter(p => p.saleId === s.id).map(p => p.mode))];
+  if (!modes.length) return 'Credit';
+  return modes.join(' + ');
+}
 function customerDueP(cid) {
   const billed = salesList().filter(s => s.customerId === cid).reduce((a, s) => a + P(s.grandTotal), 0);
   const paid = payList().filter(p => p.customerId === cid).reduce((a, p) => a + P(p.amount), 0);
@@ -271,6 +278,14 @@ async function markShared(id) {
 async function receivePayment(cid, amount, mode, note) {
   const p = P(amount); if (!(p > 0)) throw new Error('Enter an amount');
   await saveRecs([['Payments', { id: uid(), saleId: '', customerId: cid, amount: R(p), mode, kind: 'due', receivedBy: S.me.name, date: nowISO(), status: 'active', note: note || '' }, true]]);
+}
+// Customer pays the remaining due of one bill (from the send screen or the QR screen)
+async function receiveBillPayment(saleId, mode) {
+  const s = S.t.Sales.get(saleId); if (!s || s.status === 'void') throw new Error('Bill not found');
+  const dueP = saleDueP(s); if (!(dueP > 0)) return null;
+  const pay = { id: uid(), saleId, customerId: s.customerId, amount: R(dueP), mode, kind: 'due', receivedBy: S.me.name, date: nowISO(), status: 'active', note: 'Due paid for bill ' + s.billNo };
+  await saveRecs([['Payments', pay, true]]);
+  return pay;
 }
 async function addExpense(e) {
   const p = P(e.amount); if (!(p > 0)) throw new Error('Enter an amount');
@@ -487,15 +502,29 @@ async function hashPin(pin, salt) {
 }
 async function checkPin(pin) { return !!S.me && (await hashPin(pin, S.me.salt)) === S.me.pinHash; }
 
+/* ---------------- UPI QR (Settings: upiId, upiName) ---------------- */
+const upiId = () => String(setting('upiId', 'khalifaattarperfumes@okicici')).trim();
+const upiName = () => String(setting('upiName', 'Khalifa Attar and Perfumes')).trim();
+const upiValid = () => /^[\w.\-]{2,}@[a-zA-Z][\w.\-]{1,}$/.test(upiId());
+function upiLink(s, dueP) {
+  const q = [['pa', upiId()], ['pn', upiName()], ['am', (dueP / 100).toFixed(2)], ['cu', 'INR'], ['tn', 'Bill ' + s.billNo]];
+  // the UPI ID is kept as typed (validated above); the other values are URL-encoded
+  return 'upi://pay?' + q.map(([k, v]) => k + '=' + (k === 'pa' ? v : encodeURIComponent(v))).join('&');
+}
+function qrDataURL(text, cell = 8) { const q = qrcode(0, 'M'); q.addData(text); q.make(); return q.createDataURL(cell, 2); }
+const canQr = s => !!s && s.status !== 'void' && saleDueP(s) > 0 && upiValid() && typeof qrcode === 'function';
+
 /* ---------------- invoice, caption, PDF ---------------- */
-function invoiceHTML(s) {
+// opts.qr: add a "scan to pay" UPI QR for the amount still due
+function invoiceHTML(s, opts = {}) {
   const items = saleItems(s);
   const paidP = salePaidP(s), dueP = Math.max(0, P(s.grandTotal) - paidP);
+  const showQr = !!opts.qr && canQr(s);
   const disc = P(s.lineDiscount) + P(s.billDiscount);
   const shop = setting('shopName', 'Khalifa Attar & Perfumes');
   const addr = setting('address'), phone = setting('phone', '+91 98196 64949'), web = setting('website', 'khalifaattarperfumes.com');
   const gstin = setting('gstin');
-  const modeTxt = s.paymentMode === 'Credit' && paidP === 0 ? 'Credit' : s.paymentMode;
+  const modeTxt = salePayModes(s);
   return `<div class="inv" style="width:560px;background:#fff;color:#211a15;font-family:Manrope,Arial,sans-serif;padding:34px 34px 26px;box-sizing:border-box;font-feature-settings:normal;font-variant-numeric:normal;letter-spacing:0">
   <div style="display:flex;align-items:center;gap:16px;border-bottom:2px solid #b8924f;padding-bottom:16px">
     <img src="icons/logo.png" alt="" style="width:118px;height:auto;display:block">
@@ -531,14 +560,24 @@ function invoiceHTML(s) {
     ${dueP ? `<div style="display:flex;justify-content:space-between;color:#9e2f4a"><span>Due</span><b>${moneyP(dueP)}</b></div>` : ''}
     <div style="display:flex;justify-content:space-between;color:#5d5249"><span>Payment mode</span><b>${esc(modeTxt)}</b></div>
   </div>
+  ${showQr ? `<div style="margin-top:18px;border:1.5px solid #b8924f;border-radius:14px;padding:14px 16px;display:flex;gap:18px;align-items:center;background:#fbf6ec">
+    <img src="${qrDataURL(upiLink(s, dueP))}" alt="UPI QR" style="width:150px;height:150px;display:block;background:#fff;border-radius:6px;image-rendering:pixelated">
+    <div style="flex:1;font-size:12.5px;line-height:1.55;color:#5d5249">
+      <div style="font:600 21px Cormorant,Georgia,serif;color:#211a15">Scan to pay</div>
+      <div style="font-size:24px;font-weight:800;color:#9e2f4a;margin:2px 0 4px">${moneyP(dueP)}</div>
+      <div>GPay · PhonePe · Paytm · any UPI app</div>
+      <div style="margin-top:6px">UPI ID: <b style="color:#211a15">${esc(upiId())}</b></div>
+      <div>${esc(upiName())} · Bill ${esc(s.billNo)}</div>
+    </div></div>` : ''}
   <div style="margin-top:18px;padding-top:12px;border-top:1px dashed #cdbf9f;display:flex;justify-content:space-between;align-items:flex-end;font-size:12px;color:#5d5249">
     <div>Billed by: <b style="color:#211a15">${esc(userName(s.userCode))}</b></div>
     <div style="font:italic 600 16px Cormorant,Georgia,serif;color:#94733a">${esc(setting('thankYou', 'Thank you for shopping with us!'))}</div>
   </div>
 </div>`;
 }
-function buildCaption(s) {
+function buildCaption(s, opts = {}) {
   const items = saleItems(s);
+  const showQr = !!opts.qr && canQr(s);
   const paidP = salePaidP(s), dueP = Math.max(0, P(s.grandTotal) - paidP);
   const disc = P(s.lineDiscount) + P(s.billDiscount);
   const head = [`*${setting('shopName', 'Khalifa Attar & Perfumes')}*`, `Bill: ${s.billNo} | ${fmtDate(s.billDate)}`, `Customer: ${s.customerName}`, ''];
@@ -546,8 +585,9 @@ function buildCaption(s) {
   if (disc) tail.push(`Discount: −${moneyP(disc)}`);
   if (P(s.gstAmount)) tail.push(`GST ${s.gstPercent}%: ${money(s.gstAmount)}`);
   tail.push(`*Total: ${money(s.grandTotal)}*`);
-  tail.push(paidP ? `Paid: ${moneyP(paidP)} (${s.paymentMode === 'Credit' ? 'later' : s.paymentMode})` : 'Paid: ₹0 (Credit)');
-  if (dueP) tail.push(`Due: ${moneyP(dueP)}`);
+  tail.push(paidP ? `Paid: ${moneyP(paidP)} (${salePayModes(s)})` : 'Paid: ₹0 (Credit)');
+  if (dueP) tail.push(`*Due: ${moneyP(dueP)}*`);
+  if (showQr) tail.push('', `Pay ${moneyP(dueP)} by UPI: scan the QR in the bill PDF`, `or pay to UPI ID: ${upiId()}`, '');
   tail.push(`Billed by: ${userName(s.userCode)}`, '', setting('thankYou', 'Thank you for shopping with us!') + ' 🌹', setting('website', 'khalifaattarperfumes.com'));
   const itemLine = i => `${i.name}${i.size ? ' ' + i.size : ''}${i.type === 'Bakhoor' && !/bakh/i.test(i.name) ? ' (Bakhoor)' : ''} × ${i.qty} = ${money(i.amount)}`;
   const build = n => head.concat(items.slice(0, n).map(itemLine),
@@ -557,10 +597,10 @@ function buildCaption(s) {
   return text;
 }
 function pdfName(s) { return `${s.billNo}_${String(s.customerName).replace(/[^\w]+/g, '_').replace(/^_|_$/g, '') || 'Customer'}.pdf`; }
-async function makePdf(s) {
+async function makePdf(s, opts = {}) {
   const host = document.createElement('div');
   host.style.cssText = 'position:fixed;left:-10000px;top:0;z-index:-1';
-  host.innerHTML = invoiceHTML(s);
+  host.innerHTML = invoiceHTML(s, opts);
   document.body.appendChild(host);
   try {
     if (document.fonts && document.fonts.ready) await document.fonts.ready;

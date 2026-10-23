@@ -1,10 +1,10 @@
 // Khalifa Business Manager — service worker
 // HTML: network first (so updates arrive), falls back to cache offline.
 // Assets (fonts, libraries, icons): cache first. Bump VERSION on every release.
-const VERSION = 'kbm-v1.0.0';
+const VERSION = 'kbm-v1.1.0';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
-  './vendor/html2canvas.min.js', './vendor/jspdf.umd.min.js',
+  './vendor/html2canvas.min.js', './vendor/jspdf.umd.min.js', './vendor/qrcode.js',
   './fonts/manrope.woff2', './fonts/cormorant.woff2',
   './icons/logo.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png', './icons/favicon-64.png'
